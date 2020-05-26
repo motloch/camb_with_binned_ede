@@ -81,13 +81,17 @@
 
     end subroutine TDarkEnergyBins_Init
 
-    function SmoothedStepFunction(this, x)
+    function SmoothedStepFunction(this, a, ai)
     class(TDarkEnergyModel), intent(inout) :: this
     real(dl), intent(in) :: x
+    real(dl) :: arg
+
+        arg = log(a/ai)/this%de_tau
+
         !Make sure the argument of exponential sensible
-        if(arg1 < -DE_CUTOFF) then
+        if(arg < -DE_CUTOFF) then
             return 1
-        else if(arg1 < DE_CUTOFF) then
+        else if(arg < DE_CUTOFF) then
             return 1./(1. + exp(x))
         else
             return 0
@@ -112,11 +116,8 @@
     !Get contributions from each of the dark energy bins
     do i = 1, de_n_bins
 
-        arg1 = log(a/this%de_bin_ai(i+1))/this%de_tau
-        grhov_t_beyond = grhov_t_beyond + this%de_bin_amplitudes(i)*SmoothedStepFunction(arg1)
-
-        arg2 = log(a/this%de_bin_ai(i))/this%de_tau
-        grhov_t_beyond = grhov_t_beyond - this%de_bin_amplitudes(i)*SmoothedStepFunction(arg2)
+        grhov_t_beyond = grhov_t_beyond + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i+1))
+        grhov_t_beyond = grhov_t_beyond - this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i))
 
     enddo
 
