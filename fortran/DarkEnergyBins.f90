@@ -181,8 +181,6 @@
 
     end function TDarkEnergyBins_grho_de
 
-    !I am here
-
     function TDarkEnergyBins_w_de(this, a, delta, Q, w_bg)
     class(TDarkEnergyBins) :: this
     real(dl) :: TDarkEnergyBins_w_de
@@ -205,30 +203,26 @@
 
     end function TDarkEnergyBins_w_de
 
+    !I am here
+
     subroutine TDarkEnergyBins_PerturbationEvolve(this, ayprime, w, w_ix, &
         a, adotoa, k, z, y)
     class(TDarkEnergyBins), intent(in) :: this
     real(dl), intent(inout) :: ayprime(:)
     real(dl), intent(in) :: a, adotoa, w, k, z, y(:)
     integer, intent(in) :: w_ix
-    real(dl) Hv3_over_k, deriv, apow, acpow, cs2, fac
+    real(dl) Hv3_over_k, deriv
 
-    if (this%w_n < 0.9999) then
-        fac = 2*a**(2-6*this%w_n)*this%freq**2
-        cs2 = (fac*(this%n-1) + k**2)/(fac*(this%n+1) + k**2)
-    else
-        cs2 = 1
-    end if
-    apow = a**this%pow
-    acpow = this%acpow
     Hv3_over_k =  3*adotoa* y(w_ix + 1) / k
     ! dw/dlog a/(1+w)
-    deriv  = (acpow**2*(this%om+this%omL)+this%om*acpow-apow**2*this%omL)*this%pow &
-        /((apow+acpow)*(this%omL*(apow+acpow)+this%om*(1+acpow)))
+    deriv  = 
     !density perturbation
+    !Looks like there is a typo in 1806.10608: in eq 22 they have [delta] =
+    ![theta/k^2], in eq 23 they have [delta] = [theta H / k^2]
     ayprime(w_ix) = -3 * adotoa * (cs2 - w) *  (y(w_ix) + Hv3_over_k) &
         -   k * y(w_ix + 1) - (1 + w) * k * z  - adotoa*deriv* Hv3_over_k
     !(1+w)v
+    ! The deriv term is from w' in [(1+w)v]' = w'v + (1+w)v'
     ayprime(w_ix + 1) = -adotoa * (1 - 3 * cs2 - deriv) * y(w_ix + 1) + &
         k * cs2 * y(w_ix)
 
