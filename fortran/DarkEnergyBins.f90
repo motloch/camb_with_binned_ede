@@ -81,6 +81,20 @@
 
     end subroutine TDarkEnergyBins_Init
 
+    subroutine TDarkEnergyBins_PerturbedStressEnergy(this, dgrhoe, dgqe, &
+        dgq, dgrho, grho, grhov_t, w, gpres_noDE, etak, adotoa, k, kf1, ay, ayprime, w_ix)
+    class(TDarkEnergyBins), intent(inout) :: this
+    real(dl), intent(out) :: dgrhoe, dgqe
+    real(dl), intent(in) ::  dgq, dgrho, grho, grhov_t, w, gpres_noDE, etak, adotoa, k, kf1
+    real(dl), intent(in) :: ay(*)
+    real(dl), intent(inout) :: ayprime(*)
+    integer, intent(in) :: w_ix
+
+    dgrhoe = ay(w_ix) * grhov_t
+    dgqe = ay(w_ix + 1) * grhov_t
+
+    end subroutine TDarkEnergyBins_PerturbedStressEnergy
+
     function SmoothedStepFunction(this, a, ai)
     class(TDarkEnergyModel), intent(inout) :: this
     real(dl), intent(in) :: x
@@ -122,6 +136,7 @@
     enddo
 
     grhov_t = grhov_t_lcdm + grhov_t_beyond
+    if (present(w)) w = this%w_de(a)
 
     end subroutine TDarkEnergyBins_BackgroundDensityAndPressure
 
@@ -179,21 +194,6 @@
         k * cs2 * y(w_ix)
 
     end subroutine TDarkEnergyBins_PerturbationEvolve
-
-
-    subroutine TDarkEnergyBins_PerturbedStressEnergy(this, dgrhoe, dgqe, &
-        dgq, dgrho, grho, grhov_t, w, gpres_noDE, etak, adotoa, k, kf1, ay, ayprime, w_ix)
-    class(TDarkEnergyBins), intent(inout) :: this
-    real(dl), intent(out) :: dgrhoe, dgqe
-    real(dl), intent(in) ::  dgq, dgrho, grho, grhov_t, w, gpres_noDE, etak, adotoa, k, kf1
-    real(dl), intent(in) :: ay(*)
-    real(dl), intent(inout) :: ayprime(*)
-    integer, intent(in) :: w_ix
-
-    dgrhoe = ay(w_ix) * grhov_t
-    dgqe = ay(w_ix + 1) * grhov_t
-
-    end subroutine TDarkEnergyBins_PerturbedStressEnergy
 
 
     end module DarkEnergyBinsModule
