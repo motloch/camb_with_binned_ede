@@ -95,6 +95,7 @@
 
     end subroutine TDarkEnergyBins_PerturbedStressEnergy
 
+    !1/[1 + exp{ln(a/ai)/tau}]
     function SmoothedStepFunction(this, a, ai)
     class(TDarkEnergyModel), intent(inout) :: this
     real(dl), intent(in) :: x
@@ -112,31 +113,60 @@
         endif
     end function
 
-    subroutine TDarkEnergyBins_BackgroundDensityAndPressure(this, grhov, a, grhov_t, grhoa2_noDE, w)
+    !Derivative of 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
+    function SmoothedStepFunctionDer(this, a, ai)
+    class(TDarkEnergyModel), intent(inout) :: this
+    real(dl), intent(in) :: x
+    real(dl) :: arg
+
+        arg = log(a/ai)/this%de_tau
+
+        !Make sure the argument of exponential sensible
+        if( (arg < -DE_CUTOFF) .or. (arg > DE_CUTOFF) ) then
+            return 0
+        else
+            return -exp(x)/(1. + exp(x))**2/this%de_tau
+        endif
+    end function
+
+    subroutine TDarkEnergyBins_BackgroundDensityAndPressure(this, grhov, a, grhov_t, grhoa2_noDE, w, w_bg)
     !Get grhov_t = 8*pi*rho_de*a**2 and (optionally) equation of state at scale factor a
     class(TDarkEnergyModel), intent(inout) :: this
     real(dl), intent(in) :: grhov, a
     real(dl), intent(in) :: grhoa2_noDE
+    real(dl), intent(in) :: w_bg
     real(dl), intent(out) :: grhov_t
     real(dl), optional, intent(out) :: w
+    real(dl), optional, intent(in) :: w_bg
     real(dl) :: grhov_t_lcdm, grho_t, grhov_t_beyond
     real(dl) :: arg1, arg2
+    real(dl) :: delta, Q
     integer :: i
 
     grhov_t_lcdm = grhov * a * a
     grho_t = grhoa2_noDE/a2 + grhov_t_lcdm
-    grhov_t_beyond = 0
+    delta = 0
 
     !Get contributions from each of the dark energy bins
     do i = 1, de_n_bins
 
-        grhov_t_beyond = grhov_t_beyond + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i+1))
-        grhov_t_beyond = grhov_t_beyond - this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i))
+        delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i+1))
+        delta = delta - this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i))
 
     enddo
 
+    grhov_t_beyond = delta*grho_t
     grhov_t = grhov_t_lcdm + grhov_t_beyond
-    if (present(w)) w = this%w_de(a)
+
+    !Factor that goes into the DE equation of state
+    Q = grhoa2_noDE/a2/grhov_t_lcdm
+    if (present(w)) then
+        if (not present(w_bg)) then
+            stop 'w_bg'
+        else
+            w = this%w_de(a, delta, Q, w_bg)
+        endif
+    endif
 
     end subroutine TDarkEnergyBins_BackgroundDensityAndPressure
 
@@ -153,16 +183,25 @@
 
     !I am here
 
-    function TDarkEnergyBins_w_de(this, a)
+    function TDarkEnergyBins_w_de(this, a, delta, Q, w_bg)
     class(TDarkEnergyBins) :: this
     real(dl) :: TDarkEnergyBins_w_de
     real(dl), intent(IN) :: a
-    real(dl) :: rho, apow, acpow
+    real(dl), intent(in) :: delta, Q, w_bg
+    real(dl) :: ddelta_dlna
 
-    apow = a**this%pow
-    acpow = this%acpow
-    rho = this%omL+ this%om*(1+acpow)/(apow+acpow)
-    TDarkEnergyBins_w_de = this%om*(1+acpow)/(apow+acpow)**2*(1+this%w_n)*apow/rho - 1
+    ddelta_dlna = 0
+
+    !Get contributions from each of the dark energy bins
+    do i = 1, de_n_bins
+
+        ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, this%de_bin_ai(i+1))
+        ddelta_dlna = ddelta_dlna - this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, this%de_bin_ai(i))
+
+    enddo
+
+    TDarkEnergyBins_w_de = -1 + Q*delta/(1+delta+delta*Q)*(1+w_bg)&
+        -(1+Q)/3./(1+delta+delta*Q)*ddelta_dlna
 
     end function TDarkEnergyBins_w_de
 

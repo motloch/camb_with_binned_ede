@@ -2194,6 +2194,9 @@
     real(dl) ddopacity, visibility, dvisibility, ddvisibility, exptau, lenswindow
     real(dl) ISW, quadrupole_source, doppler, monopole_source, tau0, ang_dist
     real(dl) dgrho_de, dgq_de, cs2_de
+    !<pavel>
+    real(dl) w_bg
+    !</pavel>
 
     k=EV%k_buf
     k2=EV%k2_buf
@@ -2240,9 +2243,13 @@
         grhov_t = State%grhov * a2
         w_dark_energy_t = -1_dl
     else
+        w_bg = (gpres_nu + (grhor_t + grhog_t)/3)/(grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t)
+        if(State%ghork .ne. 0) then
+            stop 'omk'
+        endif
         call State%CP%DarkEnergy%BackgroundDensityAndPressure(State%grhov, a, grhov_t, &
             a2*(State%grhok + grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t), &
-            w_dark_energy_t)
+            w_dark_energy_t, w_bg)
     end if
     !</pavel>
 
