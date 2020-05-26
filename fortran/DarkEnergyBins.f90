@@ -22,6 +22,7 @@
     procedure :: PerturbedStressEnergy => TDarkEnergyBins_PerturbedStressEnergy
     procedure :: PerturbationEvolve => TDarkEnergyBins_PerturbationEvolve
     procedure :: BackgroundDensityAndPressure => TDarkEnergyBins_BackgroundDensityAndPressure
+    procedure, private :: SmoothedStepFunction
     end type TDarkEnergyBins
     !These are missing:
     !procedure :: diff_rhopi_Add_Term     -    this means there is no DE quadrupole
@@ -39,6 +40,7 @@
     !Read the number of DE bins and allocate the arrays
     this%de_n_bins  = Ini%Read_Double('DE_n_bins')
     this%de_tau  = Ini%Read_Double('DE_tau')
+    this%de_cs2 = Ini%Read_Double('DE_cs2')
     allocate(this%de_bin_ai(this%de_n_bins+1))
     allocate(this%de_bin_amplitudes(this%de_n_bins))
     !Read the DE bin boundaries and amplitudes in the bin
@@ -75,10 +77,63 @@
     class is (CAMBdata)
         this%is_cosmological_constant = .false.
         this%num_perturb_equations = 2
-        !Any other initializations go here
     end select
 
     end subroutine TDarkEnergyBins_Init
+
+    function SmoothedStepFunction(this, x)
+    class(TDarkEnergyModel), intent(inout) :: this
+    real(dl), intent(in) :: x
+        !Make sure the argument of exponential sensible
+        if(arg1 < -DE_CUTOFF) then
+            return 1
+        else if(arg1 < DE_CUTOFF) then
+            return 1./(1. + exp(x))
+        else
+            return 0
+        endif
+    end function
+
+    subroutine TDarkEnergyBins_BackgroundDensityAndPressure(this, grhov, a, grhov_t, grhoa2_noDE, w)
+    !Get grhov_t = 8*pi*rho_de*a**2 and (optionally) equation of state at scale factor a
+    class(TDarkEnergyModel), intent(inout) :: this
+    real(dl), intent(in) :: grhov, a
+    real(dl), intent(in) :: grhoa2_noDE
+    real(dl), intent(out) :: grhov_t
+    real(dl), optional, intent(out) :: w
+    real(dl) :: grhov_t_lcdm, grho_t, grhov_t_beyond
+    real(dl) :: arg1, arg2
+    integer :: i
+
+    grhov_t_lcdm = grhov * a * a
+    grho_t = grhoa2_noDE/a2 + grhov_t_lcdm
+    grhov_t_beyond = 0
+
+    !Get contributions from each of the dark energy bins
+    do i = 1, de_n_bins
+
+        arg1 = log(a/this%de_bin_ai(i+1))/this%de_tau
+        grhov_t_beyond = grhov_t_beyond + this%de_bin_amplitudes(i)*SmoothedStepFunction(arg1)
+
+        arg2 = log(a/this%de_bin_ai(i))/this%de_tau
+        grhov_t_beyond = grhov_t_beyond - this%de_bin_amplitudes(i)*SmoothedStepFunction(arg2)
+
+    enddo
+
+    grhov_t = grhov_t_lcdm + grhov_t_beyond
+
+    end subroutine TDarkEnergyBins_BackgroundDensityAndPressure
+
+    function TDarkEnergyBins_grho_de(this, a)  !relative density (8 pi G a^4 rho_de /grhov)
+    class(TDarkEnergyBins) :: this
+    real(dl) :: TDarkEnergyBins_grho_de, apow
+    real(dl), intent(IN) :: a
+
+    !If my reading is correct, by redefining BackgroundDensity we no longer need
+    !this function
+    stop 'grho'
+
+    end function TDarkEnergyBins_grho_de
 
     !I am here
 
@@ -94,21 +149,6 @@
     TDarkEnergyBins_w_de = this%om*(1+acpow)/(apow+acpow)**2*(1+this%w_n)*apow/rho - 1
 
     end function TDarkEnergyBins_w_de
-
-    function TDarkEnergyBins_grho_de(this, a)  !relative density (8 pi G a^4 rho_de /grhov)
-    class(TDarkEnergyBins) :: this
-    real(dl) :: TDarkEnergyBins_grho_de, apow
-    real(dl), intent(IN) :: a
-
-    if(a == 0.d0)then
-        TDarkEnergyBins_grho_de = 0.d0
-    else
-        apow = a**this%pow
-        TDarkEnergyBins_grho_de = (this%omL*(apow+this%acpow)+this%om*(1+this%acpow))*a**4 &
-            /((apow+this%acpow)*(this%omL+this%om))
-    endif
-
-    end function TDarkEnergyBins_grho_de
 
     subroutine TDarkEnergyBins_PerturbationEvolve(this, ayprime, w, w_ix, &
         a, adotoa, k, z, y)
@@ -154,44 +194,6 @@
 
     end subroutine TDarkEnergyBins_PerturbedStressEnergy
 
-    subroutine TDarkEnergyBins_BackgroundDensityAndPressure(this, grhov, a, grhov_t, grhoa2_noDE, w)
-    !Get grhov_t = 8*pi*rho_de*a**2 and (optionally) equation of state at scale factor a
-    class(TDarkEnergyModel), intent(inout) :: this
-    real(dl), intent(in) :: grhov, a
-    real(dl), intent(in) :: grhoa2_noDE
-    real(dl), intent(out) :: grhov_t
-    real(dl), optional, intent(out) :: w
-    real(dl) :: grhov_t_lcdm, grho_t, grhov_t_beyond
-    real(dl) :: arg1, arg2
-    integer :: i
-
-    grhov_t_lcdm = grhov * a * a
-    grho_t = grhoa2_noDE/a2 + grhov_t_lcdm
-    grhov_t_beyond = 0
-
-    !Get contributions from each of the dark energy bins
-    do i = 1, de_n_bins
-
-        !Make sure the argument of exponential sensible
-        arg1 = log(a/this%de_bin_ai(i+1))/this%de_tau
-        if(arg1 < -DE_CUTOFF) then
-            grhov_t_beyond = grhov_t_beyond + this%de_bin_amplitudes(i)
-        else if(arg1 < DE_CUTOFF) then
-            grhov_t_beyond = grhov_t_beyond + this%de_bin_amplitudes(i)/(1 + exp(arg1))
-        endif
-
-        arg2 = log(a/this%de_bin_ai(i))/this%de_tau
-        if(arg2 < -DE_CUTOFF) then
-            grhov_t_beyond = grhov_t_beyond - this%de_bin_amplitudes(i)
-        else if(arg2 < DE_CUTOFF) then
-            grhov_t_beyond = grhov_t_beyond - this%de_bin_amplitudes(i)/(1 + exp(arg2))
-        endif
-       
-    enddo
-
-    grhov_t = grhov_t_lcdm + grhov_t_beyond
-
-    end subroutine TDarkEnergyBins_BackgroundDensityAndPressure
 
     end module DarkEnergyBinsModule
     !</pavel>
