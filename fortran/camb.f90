@@ -9,6 +9,9 @@
     use Recombination
     use lensing
     use DarkEnergyFluid
+    !<pavel>
+    use DarkEnergyBins
+    !</pavel>
     implicit none
     contains
 
@@ -240,6 +243,9 @@
     use NonLinear
     use DarkEnergyFluid
     use DarkEnergyPPF
+    !<pavel>
+    use DarkEnergyBins
+    !</pavel>
     use results
 #ifdef COSMOREC
     use CosmoRec
@@ -408,6 +414,10 @@
         allocate (TDarkEnergyPPF::P%DarkEnergy)
     else if (DarkEneryModel == 'AXIONEFFECTIVEFLUID') then
         allocate (TAxionEffectiveFluid::P%DarkEnergy)
+    !<pavel>
+    else if (DarkEneryModel == 'DARKENERGYBINS') then
+        allocate (TDarkEnergyBins::P%DarkEnergy)
+    !</pavel>
     else
         ErrMsg = 'Unknown dark energy model: '//trim(DarkEneryModel)
         return

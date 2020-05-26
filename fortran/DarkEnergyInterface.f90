@@ -75,10 +75,11 @@
 
     end subroutine Init
 
-    subroutine BackgroundDensityAndPressure(this, grhov, a, grhov_t, w)
+    subroutine BackgroundDensityAndPressure(this, grhov, a, grhov_t, grhoa2_noDE, w)
     !Get grhov_t = 8*pi*rho_de*a**2 and (optionally) equation of state at scale factor a
     class(TDarkEnergyModel), intent(inout) :: this
     real(dl), intent(in) :: grhov, a
+    real(dl), intent(in) :: grhoa2_noDE
     real(dl), intent(out) :: grhov_t
     real(dl), optional, intent(out) :: w
 

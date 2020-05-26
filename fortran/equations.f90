@@ -19,22 +19,30 @@
     class(CAMBdata) :: this
     real(dl), intent(in) :: a
     real(dl) :: dtauda, rhonu, grhoa2, a2, grhov_t
+    !<pavel>
+    real(dl) :: grhoa2_noDE
+    !</pavel>
     integer :: nu_i
 
     a2 = a ** 2
-    call this%CP%DarkEnergy%BackgroundDensityAndPressure(this%grhov, a, grhov_t)
 
+    !<pavel>
     !  8*pi*G*rho*a**4.
-    grhoa2 = this%grhok * a2 + (this%grhoc + this%grhob) * a + this%grhog + this%grhornomass + &
-        grhov_t * a2
+    grhoa2_noDE = this%grhok * a2 + (this%grhoc + this%grhob) * a + this%grhog + this%grhornomass
 
     if (this%CP%Num_Nu_massive /= 0) then
         !Get massive neutrino density relative to massless
         do nu_i = 1, this%CP%nu_mass_eigenstates
             call ThermalNuBack%rho(a * this%nu_masses(nu_i), rhonu)
-            grhoa2 = grhoa2 + rhonu * this%grhormass(nu_i)
+            grhoa2_noDE = grhoa2_noDE + rhonu * this%grhormass(nu_i)
         end do
     end if
+
+    call this%CP%DarkEnergy%BackgroundDensityAndPressure(this%grhov, a, &
+        grhov_t, grhoa2_noDE)
+
+    grhoa2 = grhoa2_noDE + grhov_t * a2
+    !</pavel>
 
     dtauda = sqrt(3 / grhoa2)
 
@@ -2213,13 +2221,6 @@
     grhor_t=State%grhornomass/a2
     grhog_t=State%grhog/a2
 
-    if (EV%is_cosmological_constant) then
-        grhov_t = State%grhov * a2
-        w_dark_energy_t = -1_dl
-    else
-        call State%CP%DarkEnergy%BackgroundDensityAndPressure(State%grhov, a, grhov_t, w_dark_energy_t)
-    end if
-
 
     !total perturbations: matter terms first, then add massive nu, de and radiation
     !  8*pi*a*a*SUM[rho_i*clx_i]
@@ -2233,6 +2234,17 @@
     if (State%CP%Num_Nu_Massive > 0) then
         call MassiveNuVars(EV,ay,a,grhonu_t,gpres_nu,dgrho_matter,dgq, wnu_arr)
     end if
+
+    !<pavel>
+    if (EV%is_cosmological_constant) then
+        grhov_t = State%grhov * a2
+        w_dark_energy_t = -1_dl
+    else
+        call State%CP%DarkEnergy%BackgroundDensityAndPressure(State%grhov, a, grhov_t, &
+            a2*(State%grhok + grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t), &
+            w_dark_energy_t)
+    end if
+    !</pavel>
 
     grho_matter=grhonu_t+grhob_t+grhoc_t
     grho = grho_matter+grhor_t+grhog_t+grhov_t
@@ -2875,7 +2887,10 @@
     grhoc_t=State%grhoc/a
     grhor_t=State%grhornomass/a2
     grhog_t=State%grhog/a2
-    call CP%DarkEnergy%BackgroundDensityAndPressure(State%grhov, a, grhov_t, w_dark_energy_t)
+    !<pavel>
+    stop 'vec'
+    !call CP%DarkEnergy%BackgroundDensityAndPressure(State%grhov, a, grhov_t, w_dark_energy_t)
+    !</pavel>
 
     grho=grhob_t+grhoc_t+grhor_t+grhog_t+grhov_t
     gpres=(grhog_t+grhor_t)/3._dl+grhov_t*w_dark_energy_t

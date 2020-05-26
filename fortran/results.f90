@@ -873,7 +873,10 @@
 
     do i=1, n
         a = a_arr(i)
-        call this%CP%DarkEnergy%BackgroundDensityAndPressure(this%grhov, a, grhov_t)
+        !<pavel>
+        stop 'back'
+        !call this%CP%DarkEnergy%BackgroundDensityAndPressure(this%grhov, a, grhov_t)
+        !</pavel>
         grhonu = 0
 
         if (this%CP%Num_Nu_massive /= 0) then
@@ -997,7 +1000,10 @@
     integer i
 
     do i=1, n
-        call this%CP%DarkEnergy%BackgroundDensityAndPressure(1._dl, a(i), grhov_t(i), w(i))
+        !<pavel>
+        stop 'dese'
+        !call this%CP%DarkEnergy%BackgroundDensityAndPressure(1._dl, a(i), grhov_t(i), w(i))
+        !</pavel>
     end do
     grhov_t = grhov_t/a**2
 
