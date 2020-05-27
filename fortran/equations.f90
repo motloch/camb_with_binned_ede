@@ -2195,7 +2195,7 @@
     real(dl) ISW, quadrupole_source, doppler, monopole_source, tau0, ang_dist
     real(dl) dgrho_de, dgq_de, cs2_de
     !<pavel>
-    real(dl) w_bg
+    real(dl) de_Q, de_w_bg, de_dQ_dt, de_dw_bg_dt
     !</pavel>
 
     k=EV%k_buf
@@ -2243,13 +2243,13 @@
         grhov_t = State%grhov * a2
         w_dark_energy_t = -1_dl
     else
-        w_bg = (gpres_nu + (grhor_t + grhog_t)/3)/(grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t)
-        if(State%ghork .ne. 0) then
+        de_w_bg = (gpres_nu + (grhor_t + grhog_t)/3)/(grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t)
+        if(.not. State%flat) then
             stop 'omk'
         endif
         call State%CP%DarkEnergy%BackgroundDensityAndPressure(State%grhov, a, grhov_t, &
             a2*(State%grhok + grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t), &
-            w_dark_energy_t, w_bg)
+            w_dark_energy_t, de_w_bg)
     end if
     !</pavel>
 
@@ -2332,10 +2332,12 @@
 
     !<pavel>
     if (.not. EV%is_cosmological_constant) then
-        Q = (grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t)/(State%grhov * a * a)
-        w_bg = (gpres_nu + (grhor_t + grhog_t)/3)/(grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t)
+        de_Q = (grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t)/(State%grhov * a * a)
+        de_w_bg = (gpres_nu + (grhor_t + grhog_t)/3)/(grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t)
+        de_dQ_dt =
+        de_dw_bg_dt =
         call State%CP%DarkEnergy%PerturbationEvolve(ayprime, w_dark_energy_t, &
-        EV%w_ix, a, adotoa, k, z, ay, Q, dQ_dt, w_bg, dw_bg_dt)
+        EV%w_ix, a, adotoa, k, z, ay, de_Q, de_dQ_dt, de_w_bg, de_dw_bg_dt)
     endif
     !</pavel>
 

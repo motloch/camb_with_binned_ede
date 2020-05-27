@@ -1,5 +1,5 @@
     !<pavel>
-    module DarkEnergyBinsModule
+    module DarkEnergyBins
     use DarkEnergyInterface
     use results
     use constants
@@ -23,9 +23,6 @@
     procedure :: PerturbedStressEnergy => TDarkEnergyBins_PerturbedStressEnergy
     procedure :: PerturbationEvolve => TDarkEnergyBins_PerturbationEvolve
     procedure :: BackgroundDensityAndPressure => TDarkEnergyBins_BackgroundDensityAndPressure
-    procedure, private :: SmoothedStepFunction
-    procedure, private :: SmoothedStepFunctionDer
-    procedure, private :: SmoothedStepFunctionDerDer
     end type TDarkEnergyBins
     !These are missing:
     !procedure :: diff_rhopi_Add_Term     -    this means there is no DE quadrupole
@@ -105,13 +102,12 @@
     end subroutine TDarkEnergyBins_PerturbedStressEnergy
 
     !1/[1 + exp{ln(a/ai)/tau}]
-    function SmoothedStepFunction(this, a, ai)
-    class(TDarkEnergyBins), intent(inout) :: this
-    real(dl), intent(in) :: a, ai
+    function SmoothedStepFunction(a, ai, tau)
+    real(dl), intent(in) :: a, ai, tau
     real(dl) :: SmoothedStepFunction
     real(dl) :: arg
 
-        arg = log(a/ai)/this%de_tau
+        arg = log(a/ai)/tau
 
         !Make sure the argument of exponential sensible
         if(arg < -DE_CUTOFF) then
@@ -124,37 +120,35 @@
     end function
 
     !Derivative of 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
-    function SmoothedStepFunctionDer(this, a, ai)
-    class(TDarkEnergyBins), intent(inout) :: this
-    real(dl), intent(in) :: a, ai
+    function SmoothedStepFunctionDer(a, ai, tau)
+    real(dl), intent(in) :: a, ai, tau
     real(dl) :: SmoothedStepFunctionDer
     real(dl) :: arg
 
-        arg = log(a/ai)/this%de_tau
+        arg = log(a/ai)/tau
 
         !Make sure the argument of exponential sensible
         if( (arg < -DE_CUTOFF) .or. (arg > DE_CUTOFF) ) then
             SmoothedStepFunctionDer = 0
         else
-            SmoothedStepFunctionDer = -exp(arg)/(1. + exp(arg))**2/this%de_tau
+            SmoothedStepFunctionDer = -exp(arg)/(1. + exp(arg))**2/tau
         endif
     end function
 
     !Second derivative of 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
-    function SmoothedStepFunctionDerDer(this, a, ai)
-    class(TDarkEnergyBins), intent(inout) :: this
-    real(dl), intent(in) :: a, ai
+    function SmoothedStepFunctionDerDer(a, ai, tau)
+    real(dl), intent(in) :: a, ai, tau
     real(dl) :: SmoothedStepFunctionDerDer
     real(dl) :: arg
 
-        arg = log(a/ai)/this%de_tau
+        arg = log(a/ai)/tau
 
         !Make sure the argument of exponential sensible
         if( (arg < -DE_CUTOFF) .or. (arg > DE_CUTOFF) ) then
             SmoothedStepFunctionDerDer = 0
         else
-            SmoothedStepFunctionDerDer = 2*exp(arg)**2/(1. + exp(arg))**3/this%de_tau**2&
-                - exp(arg)/(1. + exp(arg))**2/this%de_tau**2
+            SmoothedStepFunctionDerDer = 2*exp(arg)**2/(1. + exp(arg))**3/tau**2&
+                - exp(arg)/(1. + exp(arg))**2/tau**2
         endif
     end function
 
@@ -178,8 +172,8 @@
     !Get contributions from each of the dark energy bins
     do i = 1, this%de_n_bins
 
-        delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i+1))
-        delta = delta - this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i))
+        delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i+1), this%de_tau)
+        delta = delta - this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i), this%de_tau)
 
     enddo
 
@@ -222,8 +216,8 @@
     !Get contributions from each of the dark energy bins
     do i = 1, this%de_n_bins
 
-        ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, this%de_bin_ai(i+1))
-        ddelta_dlna = ddelta_dlna - this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, this%de_bin_ai(i))
+        ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, this%de_bin_ai(i+1), this%de_tau)
+        ddelta_dlna = ddelta_dlna - this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, this%de_bin_ai(i), this%de_tau)
 
     enddo
 
@@ -245,7 +239,7 @@
     real(dl) Hv3_over_k, deriv
     real(dl) delta, ddelta_dlna, d2delta_d2lna
     real(dl) :: dQ_dlna, dw_bg_dlna
-    real(dl) :: t1, t2, t3, t4, t5, t6
+    real(dl) :: denom, t1, t2, t3, t4, t5, t6
     integer :: i
 
     dQ_dlna = dQ_dt/adotoa
@@ -258,25 +252,25 @@
     !Get contributions from each of the dark energy bins
     do i = 1, this%de_n_bins
 
-        delta = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i+1))
-        delta = ddelta_dlna - this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i))
+        delta = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i+1), this%de_tau)
+        delta = ddelta_dlna - this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i), this%de_tau)
 
-        ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, this%de_bin_ai(i+1))
-        ddelta_dlna = ddelta_dlna - this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, this%de_bin_ai(i))
+        ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, this%de_bin_ai(i+1), this%de_tau)
+        ddelta_dlna = ddelta_dlna - this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, this%de_bin_ai(i), this%de_tau)
 
-        d2delta_d2lna = d2delta_d2lna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDerDer(a, this%de_bin_ai(i+1))
-        d2delta_d2lna = d2delta_d2lna - this%de_bin_amplitudes(i)*SmoothedStepFunctionDerDer(a, this%de_bin_ai(i))
+        d2delta_d2lna = d2delta_d2lna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDerDer(a, this%de_bin_ai(i+1), this%de_tau)
+        d2delta_d2lna = d2delta_d2lna - this%de_bin_amplitudes(i)*SmoothedStepFunctionDerDer(a, this%de_bin_ai(i), this%de_tau)
 
     enddo
 
     Hv3_over_k =  3*adotoa* y(w_ix + 1) / k
     ! dw/dlog a/(1+w) - derivative of Eq 3 from 1304.3724
-    denominator = 1 + delta*(1+Q)
-    t1 = - d2delta_d2lna*(1+Q)/3/denominator
+    denom = 1 + delta*(1+Q)
+    t1 = - d2delta_d2lna*(1+Q)/3/denom
     t2 = - Q*(1+w_bg)*ddelta_dlna/denom
     t3 = -delta*(1+w_bg)*dQ_dlna/denom
     t4 = ddelta_dlna*(1+Q)*((1+Q)*ddelta_dlna + delta * dQ_dlna)/3/denom**2
-    t5 = delta*Q*(1 + w_bg)*((1+Q)*ddelta_dlna + delta*dQ_lna)/denom**2
+    t5 = delta*Q*(1 + w_bg)*((1+Q)*ddelta_dlna + delta*dQ_dlna)/denom**2
     t6 = -delta*Q*dw_bg_dlna/denom
     deriv  = (t1 + t2 + t3 + t4 + t5 + t6)/(1+w)
     !density perturbation
@@ -292,5 +286,5 @@
     end subroutine TDarkEnergyBins_PerturbationEvolve
 
 
-    end module DarkEnergyBinsModule
+    end module DarkEnergyBins
     !</pavel>
