@@ -124,13 +124,13 @@
     end function
 
     !Derivative of 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
-    function SmoothedStepFunctionDer(a, ai)
-    !class(TDarkEnergyBins), intent(inout) :: this
-    real(dl) :: SmoothedStepFunctionDer
+    function SmoothedStepFunctionDer(this, a, ai)
+    class(TDarkEnergyBins), intent(inout) :: this
     real(dl), intent(in) :: a, ai
+    real(dl) :: SmoothedStepFunctionDer
     real(dl) :: arg
 
-        arg = log(a/ai)!/this%de_tau
+        arg = log(a/ai)/this%de_tau
 
         !Make sure the argument of exponential sensible
         if( (arg < -DE_CUTOFF) .or. (arg > DE_CUTOFF) ) then
