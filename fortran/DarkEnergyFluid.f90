@@ -112,12 +112,15 @@
     end subroutine TDarkEnergyFluid_PerturbedStressEnergy
 
 
+    !<pavel>
     subroutine TDarkEnergyFluid_PerturbationEvolve(this, ayprime, w, w_ix, &
-        a, adotoa, k, z, y)
+        a, adotoa, k, z, y, Q, dQ_dt, w_bg, dw_bg_dt)
     class(TDarkEnergyFluid), intent(in) :: this
     real(dl), intent(inout) :: ayprime(:)
     real(dl), intent(in) :: a, adotoa, w, k, z, y(:)
     integer, intent(in) :: w_ix
+    real(dl), intent(in) :: Q, dQ_dt, w_bg, dw_bg_dt
+    !<pavel>
     real(dl) Hv3_over_k, loga
 
     Hv3_over_k =  3*adotoa* y(w_ix + 1) / k
@@ -238,13 +241,16 @@
 
     end function TAxionEffectiveFluid_grho_de
 
+    !<pavel>
     subroutine TAxionEffectiveFluid_PerturbationEvolve(this, ayprime, w, w_ix, &
-        a, adotoa, k, z, y)
+        a, adotoa, k, z, y, Q, dQ_dt, w_bg, dw_bg_dt)
     class(TAxionEffectiveFluid), intent(in) :: this
     real(dl), intent(inout) :: ayprime(:)
     real(dl), intent(in) :: a, adotoa, w, k, z, y(:)
     integer, intent(in) :: w_ix
     real(dl) Hv3_over_k, deriv, apow, acpow, cs2, fac
+    real(dl), intent(in) :: Q, dQ_dt, w_bg, dw_bg_dt
+    !</pavel>
 
     if (this%w_n < 0.9999) then
         fac = 2*a**(2-6*this%w_n)*this%freq**2

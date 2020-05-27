@@ -24,6 +24,8 @@
     procedure :: PerturbationEvolve => TDarkEnergyBins_PerturbationEvolve
     procedure :: BackgroundDensityAndPressure => TDarkEnergyBins_BackgroundDensityAndPressure
     procedure, private :: SmoothedStepFunction
+    procedure, private :: SmoothedStepFunctionDer
+    procedure, private :: SmoothedStepFunctionDerDer
     end type TDarkEnergyBins
     !These are missing:
     !procedure :: diff_rhopi_Add_Term     -    this means there is no DE quadrupole
@@ -41,8 +43,6 @@
     call this%TDarkEnergyModel%ReadParams(Ini)
     !Read the number of DE bins and allocate the arrays
     this%de_n_bins  = Ini%Read_Double('DE_n_bins')
-    this%de_tau  = Ini%Read_Double('DE_tau')
-    this%de_cs2 = Ini%Read_Double('DE_cs2')
     allocate(this%de_bin_ai(this%de_n_bins+1))
     allocate(this%de_bin_amplitudes(this%de_n_bins))
     !Read the DE bin boundaries and amplitudes in the bin
@@ -50,8 +50,11 @@
         this%de_bin_ai  = Ini%Read_Double_Array('DE_bin_ai', i)
     enddo
     do i = 1, this%de_n_bins
-        this%de_bin_amplitudes  = Ini%Read_Double('DE_bin_amplitudes', i)
+        this%de_bin_amplitudes  = Ini%Read_Double_Array('DE_bin_amplitudes', i)
     enddo
+    !Read the smoothing scale and soundspeed
+    this%de_tau  = Ini%Read_Double('DE_tau')
+    this%de_cs2 = Ini%Read_Double('DE_cs2')
 
     end subroutine TDarkEnergyBins_ReadParams
 
@@ -103,7 +106,7 @@
 
     !1/[1 + exp{ln(a/ai)/tau}]
     function SmoothedStepFunction(this, a, ai)
-    class(TDarkEnergyModel), intent(inout) :: this
+    class(TDarkEnergyBins), intent(inout) :: this
     real(dl), intent(in) :: a, ai
     real(dl) :: SmoothedStepFunction
     real(dl) :: arg
@@ -121,13 +124,13 @@
     end function
 
     !Derivative of 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
-    function SmoothedStepFunctionDer(this, a, ai)
-    class(TDarkEnergyModel), intent(inout) :: this
-    real(dl), intent(in) :: a, ai
+    function SmoothedStepFunctionDer(a, ai)
+    !class(TDarkEnergyBins), intent(inout) :: this
     real(dl) :: SmoothedStepFunctionDer
+    real(dl), intent(in) :: a, ai
     real(dl) :: arg
 
-        arg = log(a/ai)/this%de_tau
+        arg = log(a/ai)!/this%de_tau
 
         !Make sure the argument of exponential sensible
         if( (arg < -DE_CUTOFF) .or. (arg > DE_CUTOFF) ) then
@@ -139,7 +142,7 @@
 
     !Second derivative of 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
     function SmoothedStepFunctionDerDer(this, a, ai)
-    class(TDarkEnergyModel), intent(inout) :: this
+    class(TDarkEnergyBins), intent(inout) :: this
     real(dl), intent(in) :: a, ai
     real(dl) :: SmoothedStepFunctionDerDer
     real(dl) :: arg
@@ -157,7 +160,7 @@
 
     subroutine TDarkEnergyBins_BackgroundDensityAndPressure(this, grhov, a, grhov_t, grhoa2_noDE, w, w_bg)
     !Get grhov_t = 8*pi*rho_de*a**2 and (optionally) equation of state at scale factor a
-    class(TDarkEnergyModel), intent(inout) :: this
+    class(TDarkEnergyBins), intent(inout) :: this
     real(dl), intent(in) :: grhov, a
     real(dl), intent(in) :: grhoa2_noDE
     real(dl), intent(out) :: grhov_t
@@ -184,7 +187,7 @@
     grhov_t = grhov_t_lcdm + grhov_t_beyond
 
     !Factor that goes into the DE equation of state
-    Q = grhoa2_noDE/a2/grhov_t_lcdm
+    Q = grhoa2_noDE/a/a/grhov_t_lcdm
     if (present(w)) then
         if (.not. present(w_bg)) then
             stop 'w_bg'
@@ -240,6 +243,7 @@
     real(dl), intent(in) :: Q, dQ_dt, w_bg, dw_bg_dt
     integer, intent(in) :: w_ix
     real(dl) Hv3_over_k, deriv
+    real(dl) delta, ddelta_dlna, d2delta_d2lna
     real(dl) :: dQ_dlna, dw_bg_dlna
     real(dl) :: t1, t2, t3, t4, t5, t6
     integer :: i
