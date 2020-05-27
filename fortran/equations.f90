@@ -2330,9 +2330,14 @@
         ayprime(ix_etak)=0.5_dl*dgq + State%curv*z
     end if
 
-    if (.not. EV%is_cosmological_constant) &
+    !<pavel>
+    if (.not. EV%is_cosmological_constant) then
+        Q = (grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t)/(State%grhov * a * a)
+        w_bg = (gpres_nu + (grhor_t + grhog_t)/3)/(grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t)
         call State%CP%DarkEnergy%PerturbationEvolve(ayprime, w_dark_energy_t, &
-        EV%w_ix, a, adotoa, k, z, ay)
+        EV%w_ix, a, adotoa, k, z, ay, Q, dQ_dt, w_bg, dw_bg_dt)
+    endif
+    !</pavel>
 
     !  CDM equation of motion
     clxcdot=-k*z

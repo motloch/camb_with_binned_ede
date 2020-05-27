@@ -43,9 +43,10 @@
     public TDarkEnergyModel, TDarkEnergyEqnOfState
     contains
 
-    function w_de(this, a)
+    function w_de(this, a, delta, Q, w_bg)
     class(TDarkEnergyModel) :: this
     real(dl) :: w_de, al
+    real(dl), intent(in) :: delta, Q, w_bg
     real(dl), intent(IN) :: a
 
     w_de = -1._dl
@@ -76,7 +77,7 @@
     end subroutine Init
 
     !<pavel>
-    subroutine BackgroundDensityAndPressure(this, grhov, a, grhov_t, grhoa2_noDE, w)
+    subroutine BackgroundDensityAndPressure(this, grhov, a, grhov_t, grhoa2_noDE, w, w_bg)
     !Get grhov_t = 8*pi*rho_de*a**2 and (optionally) equation of state at scale factor a
     class(TDarkEnergyModel), intent(inout) :: this
     real(dl), intent(in) :: grhov, a
@@ -84,6 +85,10 @@
     !</pavel>
     real(dl), intent(out) :: grhov_t
     real(dl), optional, intent(out) :: w
+    !<pavel>
+    real(dl), optional, intent(in) :: w_bg
+    real(dl) :: delta, Q
+    !</pavel>
 
     if (this%is_cosmological_constant) then
         grhov_t = grhov * a * a
@@ -95,7 +100,7 @@
         else
             grhov_t = 0._dl
         end if
-        if (present(w)) w = this%w_de(a)
+        if (present(w)) w = this%w_de(a, delta, Q, w_bg)
     end if
 
     end subroutine BackgroundDensityAndPressure
@@ -172,10 +177,11 @@
     end subroutine TDarkEnergyEqnOfState_SetwTable
 
 
-    function TDarkEnergyEqnOfState_w_de(this, a)
+    function TDarkEnergyEqnOfState_w_de(this, a, delta, Q, w_bg)
     class(TDarkEnergyEqnOfState) :: this
     real(dl) :: TDarkEnergyEqnOfState_w_de, al
     real(dl), intent(IN) :: a
+    real(dl), intent(in) :: delta, Q, w_bg
 
     if(.not. this%use_tabulated_w) then
         TDarkEnergyEqnOfState_w_de= this%w_lam+ this%wa*(1._dl-a)

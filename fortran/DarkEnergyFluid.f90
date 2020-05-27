@@ -209,10 +209,11 @@
     end subroutine TAxionEffectiveFluid_Init
 
 
-    function TAxionEffectiveFluid_w_de(this, a)
+    function TAxionEffectiveFluid_w_de(this, a, delta, Q, w_bg)
     class(TAxionEffectiveFluid) :: this
     real(dl) :: TAxionEffectiveFluid_w_de
     real(dl), intent(IN) :: a
+    real(dl), intent(in) :: delta, Q, w_bg
     real(dl) :: rho, apow, acpow
 
     apow = a**this%pow

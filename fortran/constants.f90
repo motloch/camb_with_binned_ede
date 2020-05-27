@@ -11,6 +11,10 @@
     use precision
     implicit none
 
+    !<pavel>
+    real(dl), parameter :: DE_CUTOFF = 20
+    !</pavel>
+
     real(dl), parameter :: const_pi = 3.1415926535897932384626433832795_dl
     real(dl), parameter :: const_twopi=2._dl*const_pi, const_fourpi=4._dl*const_pi
     real(dl), parameter :: const_eightpi=8._dl*const_pi
