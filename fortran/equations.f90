@@ -1243,6 +1243,45 @@
 
     end subroutine Nu_Intvsq
 
+    !<pavel>
+    subroutine MassiveNuVars_dot(EV,y,a,adotoa,grho,gpres,grho_dot,gpres_dot)
+    implicit none
+    type(EvolutionVars) EV
+    real(dl) :: y(EV%nvar), a, adotoa, grho, gpres, grho_dot, gpres_dot
+    !grho = a^2 kappa rho
+    !gpres = a^2 kappa p
+    integer nu_i
+    real(dl) da, dt
+    real(dl) grhormass_t, grhormass_t_dot
+    real(dl) rhonu, pnu, rhonu_p, pnu_p, rhonu_m, pnu_m, rhonu_dot, pnu_dot
+
+    !Numerically evaluate the derivative with a small change in the scalefactor
+    da = 0.01*a
+    dt = da/a/adotoa
+
+    do nu_i = 1, CP%Nu_mass_eigenstates
+        grhormass_t=State%grhormass(nu_i)/a**2
+        grhormass_t_dot =State%grhormass(nu_i)/a**2*(-2*adotoa)
+
+        !Get density and pressure as ratio to massless by interpolation from table
+        call ThermalNuBack%rho_P(a*State%nu_masses(nu_i),rhonu,pnu)
+        call ThermalNuBack%rho_P((a+da)*State%nu_masses(nu_i),rhonu_p,pnu_p)
+        call ThermalNuBack%rho_P((a-da)*State%nu_masses(nu_i),rhonu_m,pnu_m)
+
+        rhonu_dot = (rhonu_p-rhonu_m)/2./dt
+        pnu_dot = (pnu_p-pnu_m)/2./dt
+
+        grho = grho  + grhormass_t*rhonu
+        gpres= gpres + grhormass_t*pnu
+
+        grho_dot = grho_dot  + grhormass_t_dot*rhonu+grhormass_t*rhonu_dot
+        gpres_dot= gpres_dot + grhormass_t_dot*pnu  +grhormass_t*pnu_dot
+
+    end do
+
+    end subroutine MassiveNuVars_dot
+    !</pavel>
+
 
     subroutine MassiveNuVars(EV,y,a,grho,gpres,dgrho,dgq, wnu_arr)
     implicit none
@@ -2195,7 +2234,9 @@
     real(dl) ISW, quadrupole_source, doppler, monopole_source, tau0, ang_dist
     real(dl) dgrho_de, dgq_de, cs2_de
     !<pavel>
-    real(dl) de_Q, de_w_bg, de_dQ_dt, de_dw_bg_dt
+    real(dl) de_Q, de_w_bg, de_Q_dot, de_w_bg_dot
+    real(dl) nu_grho,nu_gpres,nu_grho_dot,nu_gpres_dot
+    real(dl) grhom_t, grhom_t_dot, gpres_noDE_dot
     !</pavel>
 
     k=EV%k_buf
@@ -2332,12 +2373,22 @@
 
     !<pavel>
     if (.not. EV%is_cosmological_constant) then
-        de_Q = (grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t)/(State%grhov * a * a)
-        de_w_bg = (gpres_nu + (grhor_t + grhog_t)/3)/(grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t)
-        de_dQ_dt =
-        de_dw_bg_dt =
+        !nu_grho should be equal to grhonu_t, nu_gpres to gpres_nu
+        call MassiveNuVars_dot(EV,ay,a,adotoa,nu_grho,nu_gpres,nu_grho_dot,nu_gpres_dot)
+
+        grhom_t = grhob_t + grhoc_t + grhog_t + grhor_t + nu_grho
+        !Notice that coefficient for baryons is not -3, because of additional a^2
+        grhom_t_dot = adotoa*(-grhob_t -grhoc_t -2*grhog_t - 2*grhor_t) + nu_grho_dot
+        gpres_noDE_dot = nu_gpres_dot - 2*adotoa*(grhor_t + grhog_t)/3
+
+        de_Q = grhom_t/(State%grhov * a * a)
+        de_w_bg = gpres_noDE/grhom_t
+
+        de_Q_dot = grhom_t_dot/(State%grhov * a * a) -2*adotoa*grhom_t/(State%grhov * a * a)
+        de_w_bg_dot = gpres_noDE_dot/grhom_t - gpres_noDE_dot*grhom_t_dot/grhom_t**2
+
         call State%CP%DarkEnergy%PerturbationEvolve(ayprime, w_dark_energy_t, &
-        EV%w_ix, a, adotoa, k, z, ay, de_Q, de_dQ_dt, de_w_bg, de_dw_bg_dt)
+        EV%w_ix, a, adotoa, k, z, ay, de_Q, de_Q_dot, de_w_bg, de_w_bg_dot)
     endif
     !</pavel>
 

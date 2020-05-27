@@ -230,11 +230,11 @@
     !I am here
 
     subroutine TDarkEnergyBins_PerturbationEvolve(this, ayprime, w, w_ix, &
-        a, adotoa, k, z, y, Q, dQ_dt, w_bg, dw_bg_dt)
+        a, adotoa, k, z, y, Q, Q_dot, w_bg, w_bg_dot)
     class(TDarkEnergyBins), intent(in) :: this
     real(dl), intent(inout) :: ayprime(:)
     real(dl), intent(in) :: a, adotoa, w, k, z, y(:)
-    real(dl), intent(in) :: Q, dQ_dt, w_bg, dw_bg_dt
+    real(dl), intent(in) :: Q, Q_dot, w_bg, w_bg_dot
     integer, intent(in) :: w_ix
     real(dl) Hv3_over_k, deriv
     real(dl) delta, ddelta_dlna, d2delta_d2lna
@@ -242,8 +242,8 @@
     real(dl) :: denom, t1, t2, t3, t4, t5, t6
     integer :: i
 
-    dQ_dlna = dQ_dt/adotoa
-    dw_bg_dlna = dw_bg_dt/adotoa
+    dQ_dlna = Q_dot/adotoa
+    dw_bg_dlna = w_bg_dot/adotoa
 
     delta = 0
     ddelta_dlna = 0

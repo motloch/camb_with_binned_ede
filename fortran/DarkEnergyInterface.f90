@@ -43,10 +43,14 @@
     public TDarkEnergyModel, TDarkEnergyEqnOfState
     contains
 
+    !<pavel>
     function w_de(this, a, delta, Q, w_bg)
+    !</pavel>
     class(TDarkEnergyModel) :: this
     real(dl) :: w_de, al
+    !<pavel>
     real(dl), intent(in) :: delta, Q, w_bg
+    !</pavel>
     real(dl), intent(IN) :: a
 
     w_de = -1._dl
@@ -78,14 +82,14 @@
 
     !<pavel>
     subroutine BackgroundDensityAndPressure(this, grhov, a, grhov_t, grhoa2_noDE, w, w_bg)
+    !</pavel>
     !Get grhov_t = 8*pi*rho_de*a**2 and (optionally) equation of state at scale factor a
     class(TDarkEnergyModel), intent(inout) :: this
     real(dl), intent(in) :: grhov, a
-    real(dl), intent(in) :: grhoa2_noDE
-    !</pavel>
     real(dl), intent(out) :: grhov_t
     real(dl), optional, intent(out) :: w
     !<pavel>
+    real(dl), intent(in) :: grhoa2_noDE
     real(dl), optional, intent(in) :: w_bg
     real(dl) :: delta, Q
     !</pavel>
@@ -100,7 +104,9 @@
         else
             grhov_t = 0._dl
         end if
+        !<pavel>
         if (present(w)) w = this%w_de(a, delta, Q, w_bg)
+        !</pavel>
     end if
 
     end subroutine BackgroundDensityAndPressure
@@ -145,14 +151,16 @@
     end function diff_rhopi_Add_Term
 
     !<pavel>
-    subroutine PerturbationEvolve(this, ayprime, w, w_ix, a, adotoa, k, z, y, Q, dQ_dt, w_bg, dw_bg_dt)
+    subroutine PerturbationEvolve(this, ayprime, w, w_ix, a, adotoa, k, z, y, Q, Q_dot, w_bg, w_bg_dot)
+    !</pavel>
     class(TDarkEnergyModel), intent(in) :: this
     real(dl), intent(inout) :: ayprime(:)
     real(dl), intent(in) :: a,adotoa, k, z, y(:), w
     integer, intent(in) :: w_ix
-    real(dl), intent(in) :: Q, dQ_dt, w_bg, dw_bg_dt
-    end subroutine PerturbationEvolve
+    !<pavel>
+    real(dl), intent(in) :: Q, Q_dot, w_bg, w_bg_dot
     !</pavel>
+    end subroutine PerturbationEvolve
 
 
 
@@ -179,12 +187,15 @@
 
     end subroutine TDarkEnergyEqnOfState_SetwTable
 
-
+    !<pavel>
     function TDarkEnergyEqnOfState_w_de(this, a, delta, Q, w_bg)
+    !</pavel>
     class(TDarkEnergyEqnOfState) :: this
     real(dl) :: TDarkEnergyEqnOfState_w_de, al
     real(dl), intent(IN) :: a
+    !<pavel>
     real(dl), intent(in) :: delta, Q, w_bg
+    !</pavel>
 
     if(.not. this%use_tabulated_w) then
         TDarkEnergyEqnOfState_w_de= this%w_lam+ this%wa*(1._dl-a)
