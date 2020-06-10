@@ -166,29 +166,42 @@
     integer :: i
 
     grhov_t_lcdm = grhov * a * a
-    grho_t = grhoa2_noDE/a/a + grhov_t_lcdm
-    delta = 0
 
-    !Get contributions from each of the dark energy bins
-    do i = 1, this%de_n_bins
+    if(a > 0) then
+        grho_t = grhoa2_noDE/a/a + grhov_t_lcdm
+        delta = 0
 
-        delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i+1), this%de_tau)
-        delta = delta - this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i), this%de_tau)
+        !Get contributions from each of the dark energy bins
+        do i = 1, this%de_n_bins
 
-    enddo
+            delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i+1), this%de_tau)
+            delta = delta - this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i), this%de_tau)
 
-    grhov_t_beyond = delta*grho_t
-    grhov_t = grhov_t_lcdm + grhov_t_beyond
+        enddo
+        grhov_t_beyond = delta*grho_t
+        grhov_t = grhov_t_lcdm + grhov_t_beyond
 
-    !Factor that goes into the DE equation of state
-    Q = grhoa2_noDE/a/a/grhov_t_lcdm
-    if (present(w)) then
-        if (.not. present(w_bg)) then
-            stop 'w_bg'
-        else
-            w = this%w_de(a, delta, Q, w_bg)
+        !Factor that goes into the DE equation of state
+        Q = grhoa2_noDE/a/a/grhov_t_lcdm
+        if (present(w)) then
+            if (.not. present(w_bg)) then
+                stop 'w_bg'
+            else
+                w = this%w_de(a, delta, Q, w_bg)
+            endif
+        endif
+
+    !At a = 0, just use LCDM
+    else
+        grho_t = grhov_t_lcdm
+        delta = 0
+        grhov_t_beyond = 0
+        grhov_t = grhov_t_lcdm
+        if (present(w)) then
+            w = -1
         endif
     endif
+
 
     end subroutine TDarkEnergyBins_BackgroundDensityAndPressure
 
