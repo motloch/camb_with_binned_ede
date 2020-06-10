@@ -2300,6 +2300,9 @@
 
     grho_matter=grhonu_t+grhob_t+grhoc_t
     grho = grho_matter+grhor_t+grhog_t+grhov_t
+    !<pavel>
+    !write(*,'(5e14.5)') a, grho, grhov_t, w_dark_energy_t, de_w_bg
+    !</pavel>
     gpres_noDE = gpres_nu + (grhor_t + grhog_t)/3
 
     if (State%flat) then

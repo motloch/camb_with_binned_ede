@@ -317,7 +317,12 @@
     t4 = ddelta_dlna*(1+Q)*((1+Q)*ddelta_dlna + delta * dQ_dlna)/3/denom**2
     t5 = delta*Q*(1 + w_bg)*((1+Q)*ddelta_dlna + delta*dQ_dlna)/denom**2
     t6 = -delta*Q*dw_bg_dlna/denom
-    deriv  = (t1 + t2 + t3 + t4 + t5 + t6)/(1+w)
+    !If we are far away from any DE bins, derivative is zero
+    if(abs(1+w) .ge. 1e-6) then
+        deriv  = (t1 + t2 + t3 + t4 + t5 + t6)/(1+w)
+    else
+        deriv = 0
+    endif
     !density perturbation
     !Looks like there is a typo in 1806.10608: in eq 22 they have [delta] =
     ![theta/k^2], in eq 23 they have [delta] = [theta H / k^2]
