@@ -44,10 +44,10 @@
     allocate(this%de_bin_amplitudes(this%de_n_bins))
     !Read the DE bin boundaries and amplitudes in the bin
     do i = 1, this%de_n_bins+1
-        this%de_bin_ai  = Ini%Read_Double_Array('DE_bin_ai', i)
+        this%de_bin_ai(i)  = Ini%Read_Double_Array('DE_bin_ai', i)
     enddo
     do i = 1, this%de_n_bins
-        this%de_bin_amplitudes  = Ini%Read_Double_Array('DE_bin_amplitudes', i)
+        this%de_bin_amplitudes(i)  = Ini%Read_Double_Array('DE_bin_amplitudes', i)
     enddo
     !Read the smoothing scale and soundspeed
     this%de_tau  = Ini%Read_Double('DE_tau')
@@ -165,11 +165,46 @@
     real(dl) :: delta, Q
     integer :: i
 
+    !Checks
+    !write(*,*) 'a = 1e-7'
+    !write(*,*) SmoothedStepFunction(1d-7, 0.1d0, 0.08d0)
+    !write(*,*) SmoothedStepFunctionDer(1d-7, 0.1d0, 0.08d0)
+    !write(*,*) SmoothedStepFunctionDerDer(1d-7, 0.1d0, 0.08d0)
+    !write(*,*) 'a = 0.05'
+    !write(*,*) SmoothedStepFunction(0.05d0, 0.1d0, 0.08d0)
+    !write(*,*) SmoothedStepFunctionDer(0.05d0, 0.1d0, 0.08d0)
+    !write(*,*) SmoothedStepFunctionDerDer(0.05d0, 0.1d0, 0.08d0)
+    !write(*,*) 'a = 0.1'
+    !write(*,*) SmoothedStepFunction(0.1d0, 0.1d0, 0.08d0)
+    !write(*,*) SmoothedStepFunctionDer(0.1d0, 0.1d0, 0.08d0)
+    !write(*,*) SmoothedStepFunctionDerDer(0.1d0, 0.1d0, 0.08d0)
+    !write(*,*) 'a = 0.15'
+    !write(*,*) SmoothedStepFunction(0.15d0, 0.1d0, 0.08d0)
+    !write(*,*) SmoothedStepFunctionDer(0.15d0, 0.1d0, 0.08d0)
+    !write(*,*) SmoothedStepFunctionDerDer(0.15d0, 0.1d0, 0.08d0)
+    !write(*,*) 'a = 15'
+    !write(*,*) SmoothedStepFunction(15d0, 0.1d0, 0.08d0)
+    !write(*,*) SmoothedStepFunctionDer(15d0, 0.1d0, 0.08d0)
+    !write(*,*) SmoothedStepFunctionDerDer(15d0, 0.1d0, 0.08d0)
+    !stop
+
+    !write(*,*) 'a = 1e-7'
+    !write(*,*) this%w_de(1d-7, 0.1d0, 0.2d0, 0.5d0)
+    !write(*,*) 'a = 0.05'
+    !write(*,*) this%w_de(5d-2, 0.1d0, 0.2d0, 0.5d0)
+    !write(*,*) 'a = 0.1'
+    !write(*,*) this%w_de(1d-1, 0.1d0, 0.2d0, 0.5d0)
+    !write(*,*) 'a = 0.15'
+    !write(*,*) this%w_de(1.5d-1, 0.1d0, 0.2d0, 0.5d0)
+    !write(*,*) 'a = 15'
+    !write(*,*) this%w_de(15d0, 0.1d0, 0.2d0, 0.5d0)
+    !stop
+
     grhov_t_lcdm = grhov * a * a
+    delta = 0
 
     if(a > 0) then
         grho_t = grhoa2_noDE/a/a + grhov_t_lcdm
-        delta = 0
 
         !Get contributions from each of the dark energy bins
         do i = 1, this%de_n_bins
@@ -194,7 +229,6 @@
     !At a = 0, just use LCDM
     else
         grho_t = grhov_t_lcdm
-        delta = 0
         grhov_t_beyond = 0
         grhov_t = grhov_t_lcdm
         if (present(w)) then
@@ -239,8 +273,6 @@
         -(1+Q)/3./(1+delta+delta*Q)*ddelta_dlna
 
     end function TDarkEnergyBins_w_de
-
-    !I am here
 
     subroutine TDarkEnergyBins_PerturbationEvolve(this, ayprime, w, w_ix, &
         a, adotoa, k, z, y, Q, Q_dot, w_bg, w_bg_dot)

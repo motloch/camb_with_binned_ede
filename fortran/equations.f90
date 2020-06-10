@@ -46,6 +46,10 @@
 
     dtauda = sqrt(3 / grhoa2)
 
+    !<pavel>
+    !write(*,*) a, dtauda
+    !</pavel>
+
     end function dtauda
 
 
