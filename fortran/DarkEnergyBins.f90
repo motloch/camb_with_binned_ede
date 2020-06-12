@@ -223,6 +223,7 @@
                 stop 'w_bg'
             else
                 w = this%w_de(a, delta, Q, w_bg)
+                !write(*,'(5e20.8e3)') a, delta, Q, w_bg, w
             endif
         endif
 
@@ -284,7 +285,8 @@
     real(dl) Hv3_over_k, deriv
     real(dl) delta, ddelta_dlna, d2delta_d2lna
     real(dl) :: dQ_dlna, dw_bg_dlna
-    real(dl) :: denom, t1, t2, t3, t4, t5, t6
+    real(dl) :: denom, t1, t2, t3, t4
+    !real(dl) :: da, dlna, am, ap, w0, wm, wp, dw_dlna
     integer :: i
 
     dQ_dlna = Q_dot/adotoa
@@ -297,8 +299,8 @@
     !Get contributions from each of the dark energy bins
     do i = 1, this%de_n_bins
 
-        delta = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i+1), this%de_tau)
-        delta = ddelta_dlna - this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i), this%de_tau)
+        delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i+1), this%de_tau)
+        delta = delta - this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i), this%de_tau)
 
         ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, this%de_bin_ai(i+1), this%de_tau)
         ddelta_dlna = ddelta_dlna - this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, this%de_bin_ai(i), this%de_tau)
@@ -308,18 +310,32 @@
 
     enddo
 
+    !write(*,'(7e20.8e3)') a, delta, ddelta_dlna, Q, dQ_dlna, w_bg, dw_bg_dlna
+
+    !This was just a check
+    !da = 0.002*a
+    !dlna = da/a
+    !wm = this%w_de(a - da, delta - ddelta_dlna*dlna, Q - dQ_dlna*dlna, w_bg-dw_bg_dlna*dlna)
+    !w0 = this%w_de(a, delta, Q, w_bg)
+    !!write(*,'(5e20.8e3)') a, delta, Q, w_bg, w0
+    !wp = this%w_de(a + da, delta + ddelta_dlna*dlna, Q + dQ_dlna*dlna, w_bg+dw_bg_dlna*dlna)
+    !dw_dlna = (wp - wm)/2./dlna
+    !if(abs(1+w) .ge. 1e-6) then
+    !    dw_dlna = dw_dlna/(1+w)
+    !else
+    !    dw_dlna = 0
+    !endif
+
     Hv3_over_k =  3*adotoa* y(w_ix + 1) / k
     ! dw/dlog a/(1+w) - derivative of Eq 3 from 1304.3724
-    denom = 1 + delta*(1+Q)
-    t1 = - d2delta_d2lna*(1+Q)/3/denom
-    t2 = - Q*(1+w_bg)*ddelta_dlna/denom
-    t3 = -delta*(1+w_bg)*dQ_dlna/denom
-    t4 = ddelta_dlna*(1+Q)*((1+Q)*ddelta_dlna + delta * dQ_dlna)/3/denom**2
-    t5 = delta*Q*(1 + w_bg)*((1+Q)*ddelta_dlna + delta*dQ_dlna)/denom**2
-    t6 = -delta*Q*dw_bg_dlna/denom
+    denom = 1 + delta + delta*Q
+    t1 = -(1+Q)/3.*d2delta_d2lna/denom
+    t2 = delta*Q*dw_bg_dlna/denom
+    t3 = ddelta_dlna/3./denom**2*(ddelta_dlna*(1+Q)**2 + 3*Q*(1+w_bg))
+    t4 = -dQ_dlna/3./denom**2*(ddelta_dlna - 3*delta*(1+delta)*(1+w_bg))
     !If we are far away from any DE bins, derivative is zero
     if(abs(1+w) .ge. 1e-6) then
-        deriv  = (t1 + t2 + t3 + t4 + t5 + t6)/(1+w)
+        deriv  = (t1 + t2 + t3 + t4)/(1+w)
     else
         deriv = 0
     endif
@@ -332,6 +348,8 @@
     ! The deriv term is from w' in [(1+w)v]' = w'v + (1+w)v'
     ayprime(w_ix + 1) = -adotoa * (1 - 3 * this%de_cs2 - deriv) * y(w_ix + 1) + &
         k * this%de_cs2 * y(w_ix)
+
+    !write(*,'(8e20.8e3)') a, k, w, deriv, dw_dlna, ayprime(w_ix), ayprime(w_ix+1), w0
 
     end subroutine TDarkEnergyBins_PerturbationEvolve
 
