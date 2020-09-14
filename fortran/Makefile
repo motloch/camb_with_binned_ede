@@ -56,7 +56,7 @@ endif
 COMMON_FFLAGS += -gen-dep=$$*.d
 
 FFLAGS = -fp-model precise -W0 -WB $(COMMON_FFLAGS)
-DEBUGFLAGS =  -g -check all -check noarg_temp_created -traceback -fpe0 $(COMMON_FFLAGS)
+DEBUGFLAGS =  -g -check all -check noarg_temp_created -traceback -fpe0 $(COMMON_FFLAGS) -heap-arrays -fp-stack-check
 
 ifeq ($(shell uname -s),Darwin)
 SFFLAGS = -dynamiclib #-fpic

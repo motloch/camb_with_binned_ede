@@ -13,6 +13,7 @@
 
     !<pavel>
     real(dl), parameter :: DE_CUTOFF = 20
+    real(dl), parameter :: W_CUTOFF = 1e-6
     !</pavel>
 
     real(dl), parameter :: const_pi = 3.1415926535897932384626433832795_dl

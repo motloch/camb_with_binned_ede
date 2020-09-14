@@ -557,6 +557,9 @@
         write(*,'("Om_darkenergy        = ",f9.6)') this%Omega_de
         write(*,'("Om_K                 = ",f9.6)') P%omk
         write(*,'("Om_m (inc Om_u)      = ",f9.6)') (P%ombh2+P%omch2+P%omnuh2)/h2
+        write(*,*) 'pavel change'
+        this%Omega_de = this%CosmomcTheta()
+        stop
         write(*,'("100 theta (CosmoMC)  = ",f9.6)') 100*this%CosmomcTheta()
         if (this%CP%Num_Nu_Massive > 0) then
             write(*,'("N_eff (total)        = ",f9.6)') nu_massless_degeneracy + &
@@ -650,6 +653,14 @@
     !This is the physical (non-comoving) angular diameter distance in Mpc
     real(dl) CAMBdata_AngularDiameterDistance
     real(dl), intent(in) :: z
+
+    !write(*,*) 'pavel change'
+    !write(*,*) 'cr'
+    !write(*,*) this%curvature_radius
+    !write(*,*) 'comoving'
+    !write(*,*) this%comovingradialdistance(z)
+    !write(*,*) 'combo'
+    !write(*,*) this%rofchi(this%ComovingRadialDistance(z) /this%curvature_radius)
 
     CAMBdata_AngularDiameterDistance = this%curvature_radius/(1+z)* &
         this%rofchi(this%ComovingRadialDistance(z) /this%curvature_radius)
@@ -857,6 +868,10 @@
     atol = 1e-6
     rs = Integrate_Romberg(this,dsound_da_approx,1d-8,astar,atol)
     DA = this%AngularDiameterDistance(zstar)/astar
+    !write(*,*) 'pavel change'
+    !write(*,*) 'rs, da, astar'
+    !write(*,*) rs, DA, astar
+    !stop
     CAMBdata_CosmomcTheta = rs/DA
 
     end function CAMBdata_CosmomcTheta

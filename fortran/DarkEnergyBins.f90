@@ -21,6 +21,7 @@
     procedure :: w_de => TDarkEnergyBins_w_de
     procedure :: grho_de => TDarkEnergyBins_grho_de
     procedure :: PerturbedStressEnergy => TDarkEnergyBins_PerturbedStressEnergy
+    !procedure :: diff_rhopi_Add_Term => TDarkEnergyBins_diff_rhopi_Add_Term
     procedure :: PerturbationEvolve => TDarkEnergyBins_PerturbationEvolve
     procedure :: BackgroundDensityAndPressure => TDarkEnergyBins_BackgroundDensityAndPressure
     end type TDarkEnergyBins
@@ -101,55 +102,66 @@
 
     end subroutine TDarkEnergyBins_PerturbedStressEnergy
 
-    !1/[1 + exp{ln(a/ai)/tau}]
-    function SmoothedStepFunction(a, ai, tau)
-    real(dl), intent(in) :: a, ai, tau
+    !Step function from 1/[1 + exp{ln(a/ai)/tau}]
+    function SmoothedStepFunction(a, ai, aip1, tau)
+    real(dl), intent(in) :: a, ai, aip1, tau
     real(dl) :: SmoothedStepFunction
-    real(dl) :: arg
+    real(dl) :: arg, argp1
 
         arg = log(a/ai)/tau
+        argp1 = log(a/aip1)/tau
 
-        !Make sure the argument of exponential sensible
-        if(arg < -DE_CUTOFF) then
-            SmoothedStepFunction = 1
-        else if(arg < DE_CUTOFF) then
-            SmoothedStepFunction = 1./(1. + exp(arg))
-        else
-            SmoothedStepFunction = 0
-        endif
+        !if(arg < -1e7 .and. argp1 < -1e7) then
+        !    SmoothedStepFunction = 0
+        !else if(arg > 1e7 .and. argp1 > 1e7) then
+        !    SmoothedStepFunction = 0
+        !else
+            SmoothedStepFunction = (exp(arg) - exp(argp1))/(1. + exp(argp1))/(1. + exp(arg))
+            !SmoothedStepFunction = (erf(arg/sqrt(2.)) - erf(argp1/sqrt(2.)))/2.
+        !endif
     end function
 
-    !Derivative of 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
-    function SmoothedStepFunctionDer(a, ai, tau)
-    real(dl), intent(in) :: a, ai, tau
+    !Derivative of step function from 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
+    function SmoothedStepFunctionDer(a, ai, aip1, tau)
+    real(dl), intent(in) :: a, ai, aip1, tau
     real(dl) :: SmoothedStepFunctionDer
-    real(dl) :: arg
+    real(dl) :: arg, argp1
 
         arg = log(a/ai)/tau
+        argp1 = log(a/aip1)/tau
 
-        !Make sure the argument of exponential sensible
-        if( (arg < -DE_CUTOFF) .or. (arg > DE_CUTOFF) ) then
-            SmoothedStepFunctionDer = 0
-        else
-            SmoothedStepFunctionDer = -exp(arg)/(1. + exp(arg))**2/tau
-        endif
+        !if(arg < -1e7 .and. argp1 < -1e7) then
+        !    SmoothedStepFunctionDer = 0
+        !else if(arg > 1e7 .and. argp1 > 1e7) then
+        !    SmoothedStepFunctionDer = 0
+        !else
+            SmoothedStepFunctionDer = -exp(argp1)/(1. + exp(argp1))**2/tau + &
+                exp(arg)/(1. + exp(arg))**2/tau
+            !SmoothedStepFunctionDer = (exp(-arg**2/2.) - exp(-argp1**2/2.))/sqrt(const_twopi)/tau
+        !endif
+
     end function
 
-    !Second derivative of 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
-    function SmoothedStepFunctionDerDer(a, ai, tau)
-    real(dl), intent(in) :: a, ai, tau
+    !Second derivative of step function from 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
+    function SmoothedStepFunctionDerDer(a, ai, aip1, tau)
+    real(dl), intent(in) :: a, ai, aip1, tau
     real(dl) :: SmoothedStepFunctionDerDer
-    real(dl) :: arg
+    real(dl) :: arg, argp1
 
         arg = log(a/ai)/tau
+        argp1 = log(a/aip1)/tau
 
-        !Make sure the argument of exponential sensible
-        if( (arg < -DE_CUTOFF) .or. (arg > DE_CUTOFF) ) then
-            SmoothedStepFunctionDerDer = 0
-        else
-            SmoothedStepFunctionDerDer = 2*exp(arg)**2/(1. + exp(arg))**3/tau**2&
-                - exp(arg)/(1. + exp(arg))**2/tau**2
-        endif
+        !if(arg < -1e7 .and. argp1 < -1e7) then
+        !    SmoothedStepFunctionDerDer = 0
+        !else if(arg > 1e7 .and. argp1 > 1e7) then
+        !    SmoothedStepFunctionDerDer = 0
+        !else
+            SmoothedStepFunctionDerDer = 2*exp(argp1)**2/(1. + exp(argp1))**3/tau**2&
+                - exp(argp1)/(1. + exp(argp1))**2/tau**2 &
+                                        -2*exp(arg)**2/(1. + exp(arg))**3/tau**2&
+                + exp(arg)/(1. + exp(arg))**2/tau**2 
+            !SmoothedStepFunctionDerDer = (-arg*exp(-arg**2/2.) + argp1*exp(-argp1**2/2.))/sqrt(const_twopi)/tau**2
+        !endif
     end function
 
     subroutine TDarkEnergyBins_BackgroundDensityAndPressure(this, grhov, a, grhov_t, grhoa2_noDE, w, w_bg)
@@ -209,9 +221,8 @@
         !Get contributions from each of the dark energy bins
         do i = 1, this%de_n_bins
 
-            delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i+1), this%de_tau)
-            delta = delta - this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i), this%de_tau)
-
+            delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, &
+                                this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau)
         enddo
         grhov_t_beyond = delta*grho_t
         grhov_t = grhov_t_lcdm + grhov_t_beyond
@@ -224,6 +235,9 @@
             else
                 w = this%w_de(a, delta, Q, w_bg)
                 !write(*,'(5e20.8e3)') a, delta, Q, w_bg, w
+                !if(abs(a-1.78e-4) < 3e-6) then
+                !    write(*,'(17e14.5)') a, delta, Q, w_bg, w
+                !endif
             endif
         endif
 
@@ -236,7 +250,6 @@
             w = -1
         endif
     endif
-
 
     end subroutine TDarkEnergyBins_BackgroundDensityAndPressure
 
@@ -264,9 +277,8 @@
     !Get contributions from each of the dark energy bins
     do i = 1, this%de_n_bins
 
-        ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, this%de_bin_ai(i+1), this%de_tau)
-        ddelta_dlna = ddelta_dlna - this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, this%de_bin_ai(i), this%de_tau)
-
+        ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, &
+                        this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau)
     enddo
 
     !Eq 3 from 1304.3724
@@ -286,6 +298,8 @@
     real(dl) delta, ddelta_dlna, d2delta_d2lna
     real(dl) :: dQ_dlna, dw_bg_dlna
     real(dl) :: denom, t1, t2, t3, t4
+    real(dl) :: w0
+    real(dl) :: w_ratio
     !real(dl) :: da, dlna, am, ap, w0, wm, wp, dw_dlna
     integer :: i
 
@@ -299,14 +313,14 @@
     !Get contributions from each of the dark energy bins
     do i = 1, this%de_n_bins
 
-        delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i+1), this%de_tau)
-        delta = delta - this%de_bin_amplitudes(i)*SmoothedStepFunction(a, this%de_bin_ai(i), this%de_tau)
+        delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, &
+            this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau)
 
-        ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, this%de_bin_ai(i+1), this%de_tau)
-        ddelta_dlna = ddelta_dlna - this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, this%de_bin_ai(i), this%de_tau)
+        ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, &
+            this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau)
 
-        d2delta_d2lna = d2delta_d2lna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDerDer(a, this%de_bin_ai(i+1), this%de_tau)
-        d2delta_d2lna = d2delta_d2lna - this%de_bin_amplitudes(i)*SmoothedStepFunctionDerDer(a, this%de_bin_ai(i), this%de_tau)
+        d2delta_d2lna = d2delta_d2lna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDerDer(a, &
+            this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau)
 
     enddo
 
@@ -316,7 +330,7 @@
     !da = 0.002*a
     !dlna = da/a
     !wm = this%w_de(a - da, delta - ddelta_dlna*dlna, Q - dQ_dlna*dlna, w_bg-dw_bg_dlna*dlna)
-    !w0 = this%w_de(a, delta, Q, w_bg)
+    w0 = this%w_de(a, delta, Q, w_bg)
     !!write(*,'(5e20.8e3)') a, delta, Q, w_bg, w0
     !wp = this%w_de(a + da, delta + ddelta_dlna*dlna, Q + dQ_dlna*dlna, w_bg+dw_bg_dlna*dlna)
     !dw_dlna = (wp - wm)/2./dlna
@@ -334,10 +348,13 @@
     t3 = ddelta_dlna/3./denom**2*(ddelta_dlna*(1+Q)**2 + 3*Q*(1+w_bg))
     t4 = -dQ_dlna/3./denom**2*(ddelta_dlna - 3*delta*(1+delta)*(1+w_bg))
     !If we are far away from any DE bins, derivative is zero
-    if(abs(1+w) .ge. 1e-6) then
+    if(abs(1+w) .ge. W_CUTOFF) then
         deriv  = (t1 + t2 + t3 + t4)/(1+w)
-    else
+    else if(delta .le. 1e-8) then
         deriv = 0
+    else
+        w_ratio = (1+w)/W_CUTOFF
+        deriv = (t1 + t2 + t3 + t4)/W_CUTOFF*(2*w_ratio-w_ratio**3)
     endif
     !density perturbation
     !Looks like there is a typo in 1806.10608: in eq 22 they have [delta] =
@@ -349,10 +366,50 @@
     ayprime(w_ix + 1) = -adotoa * (1 - 3 * this%de_cs2 - deriv) * y(w_ix + 1) + &
         k * this%de_cs2 * y(w_ix)
 
-    !write(*,'(8e20.8e3)') a, k, w, deriv, dw_dlna, ayprime(w_ix), ayprime(w_ix+1), w0
+    !write(*,'(6e20.8e3)') a, k, w, deriv, ayprime(w_ix), ayprime(w_ix+1)
+
+    !if(abs(k-0.066886) < 0.002) then
+    !    write(*,'(27e14.5)') &
+    !    a, &
+    !    k, &
+    !    ayprime(w_ix), &
+    !    ayprime(w_ix+1), &
+    !    - 3 * adotoa * (this%de_cs2 - w) *  (y(w_ix) + Hv3_over_k), &
+    !    -   k * y(w_ix + 1), &
+    !    - (1 + w) * k * z, &
+    !    - adotoa*deriv* Hv3_over_k,&
+    !    - adotoa * (1 - 3 * this%de_cs2 - deriv) * y(w_ix + 1), &
+    !      k * this%de_cs2 * y(w_ix),&
+    !      adotoa, &
+    !      Hv3_over_k, &
+    !      w, &
+    !      deriv, &
+    !      w0
+    !endif
 
     end subroutine TDarkEnergyBins_PerturbationEvolve
 
+    !function TDarkEnergyBins_diff_rhopi_Add_Term(this, dgrhoe, dgqe, grho, gpres, w,  grhok, adotoa, &
+    !    Kf1, k, grhov_t, z, k2, yprime, y, w_ix) result(ppiedot)
+    !!Get derivative of anisotropic stress
+    !class(TDarkEnergyBins), intent(in) :: this
+    !real(dl), intent(in) :: dgrhoe, dgqe, grho, gpres, w, grhok, adotoa, &
+    !    k, grhov_t, z, k2, yprime(:), y(:), Kf1
+    !integer, intent(in) :: w_ix
+    !real(dl) :: ppiedot, hdotoh
+
+    !if (this%is_cosmological_constant) then
+    !    ppiedot = 0
+    !else
+    !    hdotoh = (-3._dl * grho - 3._dl * gpres - 2._dl * grhok) / 6._dl / adotoa
+    !    ppiedot = 3._dl * dgrhoe + dgqe * &
+    !        (12._dl / k * adotoa + k / adotoa - 3._dl / k * (adotoa + hdotoh)) + &
+    !        grhov_t * (1 + w) * k * z / adotoa - 2._dl * k2 * Kf1 * &
+    !        (yprime(w_ix) / adotoa - 2._dl * y(w_ix))
+    !    ppiedot = ppiedot * adotoa / Kf1
+    !end if
+
+    !end function TDarkEnergyBins_diff_rhopi_Add_Term
 
     end module DarkEnergyBins
     !</pavel>

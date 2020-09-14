@@ -163,6 +163,34 @@
     z= z + sum(y(2:n1))
     end subroutine splint
 
+    !<pavel>
+    !subroutine pavel_output(EV,n,tau,ay,ayprime)
+    !!use constants, only : barssc0, Compton_CT, line21_const
+    !!use MassiveNu
+    !!use Recombination
+    !use GaugeInterface, only : EvolutionVars
+    !implicit none
+    !type(EvolutionVars) EV
+    !integer n
+    !integer, parameter :: dl = KIND(1.d0)
+    !real(dl) ay(n),ayprime(n)
+    !real(dl) tau
+    !real(dl) a
+    !real(dl) opacity, cs2, dopacity
+
+    !!  Get background scale factor, sound speed and ionisation fraction.
+    !!if (EV%TightCoupling) then
+    !!call EV%ThermoData%Values(tau,a,cs2,opacity)
+    !!else
+    !!    call EV%ThermoData%Values(tau,a,cs2,opacity)
+    !!end if
+
+    !if(abs(EV%k_buf-0.066886) < 0.002) then
+    !    write(*,'(1e17.8, 17e14.5)') tau, EV%k_buf, ay(EV%w_ix), ay(EV%w_ix+1)
+    !endif
+    !end subroutine
+    !</pavel>
+
 
     !This version is modified to pass an object parameter to the function on each call
     !Fortunately Fortran doesn't do type checking on functions, so we can pretend the
@@ -886,6 +914,9 @@
     !              step accepted (ind .eq. 5), so update x, y from xtrial,
     !                 ytrial, add 1 to the no of successful steps, and set
     !                 the no of successive failures to zero
+    !<pavel>
+    !call pavel_output(EV,n, x, y, w(1,1))
+    !</pavel>
     x = c(17)
     do 400 k = 1, n
         y(k) = w(k,9)
