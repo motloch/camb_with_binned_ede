@@ -111,14 +111,14 @@
         arg = log(a/ai)/tau
         argp1 = log(a/aip1)/tau
 
-        !if(arg < -1e7 .and. argp1 < -1e7) then
-        !    SmoothedStepFunction = 0
-        !else if(arg > 1e7 .and. argp1 > 1e7) then
-        !    SmoothedStepFunction = 0
-        !else
+        if(arg < -700 .and. argp1 < -700) then
+            SmoothedStepFunction = 0
+        else if(arg > 700 .and. argp1 > 700) then
+            SmoothedStepFunction = 0
+        else
             SmoothedStepFunction = (exp(arg) - exp(argp1))/(1. + exp(argp1))/(1. + exp(arg))
-            !SmoothedStepFunction = (erf(arg/sqrt(2.)) - erf(argp1/sqrt(2.)))/2.
-        !endif
+            SmoothedStepFunction = (erf(arg/sqrt(2.)) - erf(argp1/sqrt(2.)))/2.
+        endif
     end function
 
     !Derivative of step function from 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
@@ -130,15 +130,15 @@
         arg = log(a/ai)/tau
         argp1 = log(a/aip1)/tau
 
-        !if(arg < -1e7 .and. argp1 < -1e7) then
-        !    SmoothedStepFunctionDer = 0
-        !else if(arg > 1e7 .and. argp1 > 1e7) then
-        !    SmoothedStepFunctionDer = 0
-        !else
+        if(arg < -700 .and. argp1 < -700) then
+            SmoothedStepFunctionDer = 0
+        else if(arg > 700 .and. argp1 > 700) then
+            SmoothedStepFunctionDer = 0
+        else
             SmoothedStepFunctionDer = -exp(argp1)/(1. + exp(argp1))**2/tau + &
                 exp(arg)/(1. + exp(arg))**2/tau
-            !SmoothedStepFunctionDer = (exp(-arg**2/2.) - exp(-argp1**2/2.))/sqrt(const_twopi)/tau
-        !endif
+            SmoothedStepFunctionDer = (exp(-arg**2/2.) - exp(-argp1**2/2.))/sqrt(const_twopi)/tau
+        endif
 
     end function
 
@@ -151,17 +151,17 @@
         arg = log(a/ai)/tau
         argp1 = log(a/aip1)/tau
 
-        !if(arg < -1e7 .and. argp1 < -1e7) then
-        !    SmoothedStepFunctionDerDer = 0
-        !else if(arg > 1e7 .and. argp1 > 1e7) then
-        !    SmoothedStepFunctionDerDer = 0
-        !else
+        if(arg < -700 .and. argp1 < -700) then
+            SmoothedStepFunctionDerDer = 0
+        else if(arg > 700 .and. argp1 > 700) then
+            SmoothedStepFunctionDerDer = 0
+        else
             SmoothedStepFunctionDerDer = 2*exp(argp1)**2/(1. + exp(argp1))**3/tau**2&
                 - exp(argp1)/(1. + exp(argp1))**2/tau**2 &
                                         -2*exp(arg)**2/(1. + exp(arg))**3/tau**2&
                 + exp(arg)/(1. + exp(arg))**2/tau**2 
-            !SmoothedStepFunctionDerDer = (-arg*exp(-arg**2/2.) + argp1*exp(-argp1**2/2.))/sqrt(const_twopi)/tau**2
-        !endif
+            SmoothedStepFunctionDerDer = (-arg*exp(-arg**2/2.) + argp1*exp(-argp1**2/2.))/sqrt(const_twopi)/tau**2
+        endif
     end function
 
     subroutine TDarkEnergyBins_BackgroundDensityAndPressure(this, grhov, a, grhov_t, grhoa2_noDE, w, w_bg)
@@ -224,6 +224,7 @@
             delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, &
                                 this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau)
         enddo
+
         grhov_t_beyond = delta*grho_t
         grhov_t = grhov_t_lcdm + grhov_t_beyond
 
