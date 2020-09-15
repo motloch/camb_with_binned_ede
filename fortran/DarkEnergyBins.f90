@@ -9,6 +9,8 @@
 
     type, extends(TDarkEnergyModel) :: TDarkEnergyBins
         integer :: de_n_bins
+        integer :: de_step_type
+        real(dl) :: W_CUTOFF
         real(dl) :: de_cs2
         real(dl) :: de_tau
         real(dl), allocatable :: de_bin_ai(:)
@@ -41,6 +43,8 @@
     call this%TDarkEnergyModel%ReadParams(Ini)
     !Read the number of DE bins and allocate the arrays
     this%de_n_bins  = Ini%Read_Double('DE_n_bins')
+    this%de_step_type = Ini%Read_Int('DE_step_type')
+    this%W_CUTOFF = Ini%Read_Double('DE_W_CUTOFF')
     allocate(this%de_bin_ai(this%de_n_bins+1))
     allocate(this%de_bin_amplitudes(this%de_n_bins))
     !Read the DE bin boundaries and amplitudes in the bin
@@ -103,8 +107,9 @@
     end subroutine TDarkEnergyBins_PerturbedStressEnergy
 
     !Step function from 1/[1 + exp{ln(a/ai)/tau}]
-    function SmoothedStepFunction(a, ai, aip1, tau)
+    function SmoothedStepFunction(a, ai, aip1, tau, step_type)
     real(dl), intent(in) :: a, ai, aip1, tau
+    integer, intent(in) :: step_type
     real(dl) :: SmoothedStepFunction
     real(dl) :: arg, argp1
 
@@ -116,14 +121,21 @@
         else if(arg > 700 .and. argp1 > 700) then
             SmoothedStepFunction = 0
         else
-            SmoothedStepFunction = (exp(arg) - exp(argp1))/(1. + exp(argp1))/(1. + exp(arg))
-            SmoothedStepFunction = (erf(arg/sqrt(2.)) - erf(argp1/sqrt(2.)))/2.
+            !We are in the step region
+            if(step_type == 1) then
+                SmoothedStepFunction = (exp(arg) - exp(argp1))/(1. + exp(argp1))/(1. + exp(arg))
+            else if(step_type == 2) then
+                SmoothedStepFunction = (erf(arg/sqrt(2.)) - erf(argp1/sqrt(2.)))/2.
+            else
+               stop 'step' 
+            endif
         endif
     end function
 
     !Derivative of step function from 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
-    function SmoothedStepFunctionDer(a, ai, aip1, tau)
+    function SmoothedStepFunctionDer(a, ai, aip1, tau, step_type)
     real(dl), intent(in) :: a, ai, aip1, tau
+    integer, intent(in) :: step_type
     real(dl) :: SmoothedStepFunctionDer
     real(dl) :: arg, argp1
 
@@ -135,16 +147,23 @@
         else if(arg > 700 .and. argp1 > 700) then
             SmoothedStepFunctionDer = 0
         else
-            SmoothedStepFunctionDer = -exp(argp1)/(1. + exp(argp1))**2/tau + &
-                exp(arg)/(1. + exp(arg))**2/tau
-            SmoothedStepFunctionDer = (exp(-arg**2/2.) - exp(-argp1**2/2.))/sqrt(const_twopi)/tau
+            !We are in the step region
+            if(step_type == 1) then
+                SmoothedStepFunctionDer = -exp(argp1)/(1. + exp(argp1))**2/tau + &
+                    exp(arg)/(1. + exp(arg))**2/tau
+            else if(step_type == 2) then
+                SmoothedStepFunctionDer = (exp(-arg**2/2.) - exp(-argp1**2/2.))/sqrt(const_twopi)/tau
+            else
+                stop 'step'
+            endif
         endif
 
     end function
 
     !Second derivative of step function from 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
-    function SmoothedStepFunctionDerDer(a, ai, aip1, tau)
+    function SmoothedStepFunctionDerDer(a, ai, aip1, tau, step_type)
     real(dl), intent(in) :: a, ai, aip1, tau
+    integer, intent(in) :: step_type
     real(dl) :: SmoothedStepFunctionDerDer
     real(dl) :: arg, argp1
 
@@ -156,11 +175,17 @@
         else if(arg > 700 .and. argp1 > 700) then
             SmoothedStepFunctionDerDer = 0
         else
-            SmoothedStepFunctionDerDer = 2*exp(argp1)**2/(1. + exp(argp1))**3/tau**2&
-                - exp(argp1)/(1. + exp(argp1))**2/tau**2 &
-                                        -2*exp(arg)**2/(1. + exp(arg))**3/tau**2&
-                + exp(arg)/(1. + exp(arg))**2/tau**2 
-            SmoothedStepFunctionDerDer = (-arg*exp(-arg**2/2.) + argp1*exp(-argp1**2/2.))/sqrt(const_twopi)/tau**2
+            !We are in the step region
+            if(step_type == 1) then
+                SmoothedStepFunctionDerDer = 2*exp(argp1)**2/(1. + exp(argp1))**3/tau**2&
+                    - exp(argp1)/(1. + exp(argp1))**2/tau**2 &
+                    -2*exp(arg)**2/(1. + exp(arg))**3/tau**2 &
+                    + exp(arg)/(1. + exp(arg))**2/tau**2 
+            else if(step_type == 2) then
+                SmoothedStepFunctionDerDer = (-arg*exp(-arg**2/2.) + argp1*exp(-argp1**2/2.))/sqrt(const_twopi)/tau**2
+            else
+                stop 'step'
+            endif
         endif
     end function
 
@@ -222,7 +247,7 @@
         do i = 1, this%de_n_bins
 
             delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, &
-                                this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau)
+                                this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, this%de_step_type)
         enddo
 
         grhov_t_beyond = delta*grho_t
@@ -279,7 +304,8 @@
     do i = 1, this%de_n_bins
 
         ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, &
-                        this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau)
+                        this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
+                        this%de_step_type)
     enddo
 
     !Eq 3 from 1304.3724
@@ -315,13 +341,16 @@
     do i = 1, this%de_n_bins
 
         delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, &
-            this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau)
+            this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
+            this%de_step_type)
 
         ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, &
-            this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau)
+            this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
+            this%de_step_type)
 
         d2delta_d2lna = d2delta_d2lna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDerDer(a, &
-            this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau)
+            this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
+            this%de_step_type)
 
     enddo
 
@@ -348,15 +377,18 @@
     t2 = delta*Q*dw_bg_dlna/denom
     t3 = ddelta_dlna/3./denom**2*(ddelta_dlna*(1+Q)**2 + 3*Q*(1+w_bg))
     t4 = -dQ_dlna/3./denom**2*(ddelta_dlna - 3*delta*(1+delta)*(1+w_bg))
-    !If we are far away from any DE bins, derivative is zero
-    if(abs(1+w) .ge. W_CUTOFF) then
+
+    !Make sure we do not get into problems because of the singularity
+    if(abs(1+w) .ge. this%W_CUTOFF) then
         deriv  = (t1 + t2 + t3 + t4)/(1+w)
+    !If we are far away from any DE bins, derivative is zero
     else if(delta .le. 1e-8) then
         deriv = 0
     else
-        w_ratio = (1+w)/W_CUTOFF
-        deriv = (t1 + t2 + t3 + t4)/W_CUTOFF*(2*w_ratio-w_ratio**3)
+        w_ratio = (1+w)/this%W_CUTOFF
+        deriv = (t1 + t2 + t3 + t4)/this%W_CUTOFF*(2*w_ratio-w_ratio**3)
     endif
+
     !density perturbation
     !Looks like there is a typo in 1806.10608: in eq 22 they have [delta] =
     ![theta/k^2], in eq 23 they have [delta] = [theta H / k^2]
