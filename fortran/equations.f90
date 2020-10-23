@@ -46,10 +46,6 @@
 
     dtauda = sqrt(3 / grhoa2)
 
-    !<pavel>
-    !write(*,*) a, dtauda
-    !</pavel>
-
     end function dtauda
 
 
@@ -1133,9 +1129,6 @@
             v=1._dl/sqrt(1._dl+aq*aq)
             drhonu=drhonu+ nu_int_kernel(iq)* y(ind)/v
             fnu=fnu+nu_int_kernel(iq)* y(ind+1)
-            !if(abs(EV%k_buf-0.011933) < 0.001) then
-                !write(*,'(8e14.5)') 1., float(iq), a, EV%k_buf, nu_int_kernel(iq), y(ind+1), 0., 0.
-            !endif
             if (present(dpnu)) then
                 dpnu=dpnu+  nu_int_kernel(iq)* y(ind)*v
                 pinu=pinu+ nu_int_kernel(iq)*y(ind+2)*v
@@ -1151,9 +1144,6 @@
             tmp = nu_int_kernel(iq)*(y(EV%r_ix)  + pert_scale*y(ind))
             drhonu=drhonu+ tmp/v
             fnu=fnu+nu_int_kernel(iq)*(y(EV%r_ix+1)+ pert_scale*y(ind+1))
-            !if(abs(EV%k_buf-0.011933) < 0.001) then
-            !    write(*,'(8e14.5)') 2., float(iq), a, EV%k_buf, nu_int_kernel(iq), y(ind+1), y(EV%r_ix+1), pert_scale
-            !endif
             if (present(dpnu)) then
                 dpnu=dpnu+ tmp*v
                 pinu = pinu+ nu_int_kernel(iq)*(y(EV%r_ix+2)+ pert_scale*y(ind+2))*v
@@ -1323,18 +1313,12 @@
         if (EV%MassiveNuApprox(nu_i)) then
             clxnu=y(EV%nu_ix(nu_i))
             qnu=y(EV%nu_ix(nu_i)+2)
-            !if(abs(EV%k_buf-0.011933) < 0.001) then
-            !    write(*,'(8e14.5)') a, EV%k_buf, grhormass_t, rhonu, pnu, clxnu, qnu, 1.
-            !endif
         else
             !Integrate over q
             call Nu_Integrate_L012(EV, y, a, nu_i, clxnu,qnu)
             !clxnu_here  = rhonu*clxnu, qnu_here = qnu*rhonu
             qnu=qnu/rhonu
             clxnu = clxnu/rhonu
-            !if(abs(EV%k_buf-0.011933) < 0.001) then
-            !    write(*,'(8e14.5)') a, EV%k_buf, grhormass_t, rhonu, pnu, clxnu, qnu, 2.
-            !endif
         endif
 
         grhonu_t=grhormass_t*rhonu
@@ -2263,9 +2247,9 @@
     real(dl) nu_grho,nu_gpres,nu_grho_dot,nu_gpres_dot
     real(dl) grhom_t, grhom_t_dot, gpres_noDE_dot
     real(dl) dgq_nu
-    !</pavel>
 
     ayprime = 0
+    !</pavel>
 
     k=EV%k_buf
     k2=EV%k2_buf
@@ -2304,9 +2288,11 @@
     grhonu_t=0
 
     if (State%CP%Num_Nu_Massive > 0) then
+        !<pavel>
         dgq_nu = 0
         call MassiveNuVars(EV,ay,a,grhonu_t,gpres_nu,dgrho_matter,dgq_nu, wnu_arr)
         dgq = dgq + dgq_nu
+        !</pavel>
     end if
 
     !<pavel>
@@ -2326,14 +2312,6 @@
 
     grho_matter=grhonu_t+grhob_t+grhoc_t
     grho = grho_matter+grhor_t+grhog_t+grhov_t
-    !<pavel>
-    !if(abs(k-0.066886) < 0.002) then
-    !    write(*,'(5e14.5)') a, grho, grhov_t, w_dark_energy_t, de_w_bg
-    !endif
-    !if(abs(k-0.108732) < 1e-3) then
-    !    write(*,'(15e16.7)') a, tau, grho, grhov_t, w_dark_energy_t, de_w_bg
-    !endif
-    !</pavel>
     gpres_noDE = gpres_nu + (grhor_t + grhog_t)/3
 
     if (State%flat) then
@@ -2396,10 +2374,6 @@
         dgrho = dgrho + dgrho_de
         dgq = dgq + dgq_de
     end if
-
-    !if(abs(k-0.011933) < 0.001) then
-    !    write(*,'(9e14.5)') a, k, dgq, dgq_de, grhog_t*qg, grhor_t*qr, grhob_t*vb, dgq_nu, w_dark_energy_t
-    !endif
 
     !  Get sigma (shear) and z from the constraints
     ! have to get z from eta for numerical stability
@@ -2486,10 +2460,6 @@
 
     !  Use explicit equation for vb if appropriate
 
-    !if(abs(k-0.108732) < 1e-3) then
-    !    write(*,'(3e16.7,3l)') k, tau, a, EV%TightCoupling
-    !endif
-
     if (EV%TightCoupling) then
         !  ddota/a
         gpres = gpres_noDE + w_dark_energy_t*grhov_t
@@ -2539,13 +2509,6 @@
 
     ayprime(ix_vb)=vbdot
 
-    !if(abs(k-0.011933) < 0.001) then
-    !    if(a > 2e-5) then
-    !        write(*,*) 'ayprime before gamma'
-    !        write(*,*) ayprime
-    !    endif
-    !endif
-
     if (.not. EV%no_phot_multpoles) then
         !  Photon equations of motion
         ayprime(EV%g_ix)=clxgdot
@@ -2591,13 +2554,6 @@
             endif
         end if
     end if
-
-    !if(abs(k-0.011933) < 0.001) then
-    !    if(a > 2e-5) then
-    !        write(*,*) 'ayprime before nu'
-    !        write(*,*) ayprime
-    !    endif
-    !endif
 
     if (.not. EV%no_nu_multpoles) then
         !  Massless neutrino equations of motion.
@@ -2728,13 +2684,6 @@
         end if
     end if
 
-    !if(abs(k-0.011933) < 0.001) then
-    !    if(a > 2e-5) then
-    !        write(*,*) 'ayprime before massive nu'
-    !        write(*,*) ayprime
-    !    endif
-    !endif
-
 
     !  Massive neutrino equations of motion.
     if (State%CP%Num_Nu_massive >0) then
@@ -2788,11 +2737,6 @@
             do l=1,EV%lmaxnu_pert-1
                 ind=ind+1
                 ind2=ind2+1
-                !if(abs(k-0.011933) < 0.001) then
-                !    if(a > 2e-5) then
-                !        write(*,*) ind, ind2
-                !    endif
-                !endif
                 ayprime(ind)= -a2*(EV%denlk(l)*ay(ind2-1)-EV%denlk2(l)*ay(ind2+1)) &
                     +   (EV%denlk(l)*ay(ind-1)-EV%denlk2(l)*ay(ind+1))
             end do
@@ -2801,92 +2745,6 @@
             ayprime(ind)= k*(ay(ind-1) -a2*ay(ind2-1)) -(EV%lmaxnu_pert+1)*cothxor*ay(ind)
         end if
     end if
-
-    !if(abs(k-0.011933) < 0.001 .and. EV%nq(1) > 0) then
-    !    !write(*,*) EV%nu_ix(1)
-    !    !write(*,*) EV%nq(1)
-    !    !write(*,*) State%CP%Num_Nu_massive
-    !    !write(*,*) State%CP%Nu_mass_eigenstates
-    !    !write(*,*) size(ay)
-    !    !stop
-    !    write(*,'(4e14.5)') a, k, ay(EV%nu_ix(1):EV%nu_ix(1)+1)
-    !endif
-
-    !if(EV%lmaxnu_pert > EV%lmaxnr) then
-    !    write(*,'(2e14.5,i7)') a, k, EV%lmaxnu_pert - EV%lmaxnr
-    !endif
-
-    !if(abs(k-0.066886) < 0.002) then
-    !    write(*,'(1e17.8, 17e14.5)') a, tau, k, ay(EV%w_ix), ay(EV%w_ix+1), z, ayprime(EV%w_ix), ayprime(EV%w_ix+1)
-    !endif
-
-    !if(abs(k-0.011933) < 0.001) then
-    !if(abs(k-0.066886) < 0.0001) then
-    !    write(*,'(999e14.5)') a, tau, k, ay
-    !    if(a > 2e-5) then
-    !        write(*,*) 'etak', ix_etak
-    !        write(*,*) 'deltac', ix_clxc
-    !        write(*,*) 'deltab', ix_clxb
-    !        write(*,*) 'vb', ix_vb
-    !        write(*,*) 'photons', EV%g_ix, EV%lmaxg
-    !        write(*,*) 'neutrinos', EV%r_ix, EV%lmaxnr
-    !        write(*,*) 'nu pert', EV%nu_pert_ix, EV%lmaxnu_pert
-    !        write(*,*) 'polarization', EV%polind
-    !        write(*,*) 'massive neutrinos', EV%nu_ix
-    !        write(*,*) 'de', EV%w_ix
-    !        write(*,*) 'matter temp', EV%Tg_ix
-    !        write(*,*) 'matter temp pert', EV%reion_line_ix
-
-    !        write(*,*) 'xe pert', EV%xe_ix
-    !        write(*,*) 'delta Ts', EV%Ts_ix
-
-    !        write(*,*) 'qix', EV%q_ix
-    !        write(*,*) 'no nu mult', EV%no_nu_multpoles
-    !        write(*,*) 'no phot mult', EV%no_phot_multpoles
-    !        write(*,*) 'tight coupling', EV%TightCoupling
-    !        write(*,*) 'evolve baryon cs', EV%Evolve_baryon_cs
-    !        write(*,*) 'evolve delta xe', State%CP%Evolve_delta_xe
-    !        write(*,*) 'high ktau neutrino', EV%high_ktau_neutrino_approx
-    !        write(*,*) 'do 21cm', State%CP%Do21cm
-    !        write(*,*) 'num nu massive', State%CP%Num_Nu_massive
-    !        write(*,*) 'massive nu approx', EV%MassiveNuApprox
-    !        write(*,*) 'nu lmax', EV%nq
-    !        write(*,*) 'has nu relativistic', EV%has_nu_relativistic
-    !        write(*,*) 'ayprime'
-    !        write(*,*) ayprime
-    !        stop
-    !    endif
-    !endif
-
-    !if(abs(k-1.26e-3) < 1e-5 .and. abs(tau - 996.07) < 0.01) then
-    !    write(*,'(48e16.7)') a, tau, EV%k_buf, &
-    !        ay(ix_etak), ay(EV%g_ix), ay(EV%g_ix+1), &
-    !        ay(EV%g_ix+2), ay(ix_clxc), ay(ix_clxb), &
-    !        ay(ix_vb), ay(EV%w_ix), ay(EV%w_ix+1), &
-    !        ayprime(ix_etak), ayprime(EV%g_ix), ayprime(EV%g_ix+1), &
-    !        ayprime(EV%g_ix+2), ayprime(ix_clxc), ayprime(ix_clxb), &
-    !        ayprime(ix_vb), ayprime(EV%w_ix), ayprime(EV%w_ix+1)
-    !endif
-
-    !if(abs(k-0.108732) < 1e-6 .and. abs(tau - 280) < 50) then
-    !    write(*,'(48e16.7)') a, tau, EV%k_buf, &
-    !        ay(ix_etak), ay(EV%g_ix), ay(EV%g_ix+1), &
-    !        ay(EV%g_ix+2), ay(ix_clxc), ay(ix_clxb), &
-    !        ay(ix_vb), ay(EV%w_ix), ay(EV%w_ix+1), &
-    !        ayprime(ix_etak), ayprime(EV%g_ix), ayprime(EV%g_ix+1), &
-    !        ayprime(EV%g_ix+2), ayprime(ix_clxc), ayprime(ix_clxb), &
-    !        ayprime(ix_vb), ayprime(EV%w_ix), ayprime(EV%w_ix+1)
-    !endif
-
-    !if(abs(EV%k_buf-0.108732) < 1e-3 .and. tau < 200) then
-    !    write(*,'(48e17.8e3)') a, tau, EV%k_buf, z, &
-    !        ay(ix_etak), ay(EV%g_ix), ay(EV%g_ix+1), &
-    !        ay(EV%g_ix+2), ay(ix_clxc), ay(ix_clxb), &
-    !        ay(ix_vb), ay(EV%w_ix), ay(EV%w_ix+1), &
-    !        ayprime(ix_etak), ayprime(EV%g_ix), ayprime(EV%g_ix+1), &
-    !        ayprime(EV%g_ix+2), ayprime(ix_clxc), ayprime(ix_clxb), &
-    !        ayprime(ix_vb), ayprime(EV%w_ix), ayprime(EV%w_ix+1)
-    !endif
 
     if (associated(EV%OutputTransfer) .or. associated(EV%OutputSources)) then
         if (EV%TightCoupling .or. EV%no_phot_multpoles) then
@@ -2992,22 +2850,10 @@
             phidot = (1.0d0/2.0d0)*(adotoa*(-dgpi - 2*k2*phi) + dgq*k - &
                 diff_rhopi+ k*sigma*(gpres + grho))/k2
 
-            !if(abs(EV%k_buf-0.066886) < 0.002) then
-            !    write(*,'(17e14.5)') a, tau, k, phi, phidot
-            !endif
-
             !time derivative of shear
             sigmadot = -adotoa*sigma - 1.0d0/2.0d0*dgpi/k + k*phi
             !quadrupole source derivatives; polter = pi_g/10 + 3/5 E_2
             polter = pig/10+9._dl/15*E(2)
-
-            !if(abs(EV%k_buf-1.26e-3) < 1e-5) then
-            !    if(EV%tightCoupling)then
-            !        write(*,'(17e14.5)') a, tau, k, pig, E(2), polter, 1._dl
-            !    else
-            !        write(*,'(17e14.5)') a, tau, k, pig, E(2), polter, 0._dl
-            !    endif
-            !endif
 
             polterdot = (1.0d0/10.0d0)*pigdot + (3.0d0/5.0d0)*Edot(2)
             polterddot = -2.0d0/25.0d0*adotoa*dgq/(k*EV%Kf(1)) - 4.0d0/75.0d0*adotoa* &
@@ -3026,26 +2872,12 @@
                 + (k**2*polter + 3*polterddot)*visibility)/k**2
 
             EV%OutputSources(1) = ISW + doppler + monopole_source + quadrupole_source
-            !if(abs(k-0.108732) < 1e-3) then
-                !write(*,'(8e16.7)') a, tau, k, EV%outputSources(1), ISW, doppler, monopole_source, quadrupole_source
-                !write(*,'(9e14.5)') a, tau, k, -etak/(k*EV%Kf(1)), 2*phi, clxg/4
-            !endif
-
-            !if(abs(k-0.011933) < 0.001) then
-                !write(*,'(7e14.5)') a, k, EV%outputSources(1), ISW, doppler, monopole_source, quadrupole_source
-                !write(*,'(9e14.5)') a, tau, k, doppler, sigma, sigmadot, vb, vbdot, ay(ix_vb)
-            !endif
-            !if(abs(k-0.066886) < 0.0001) then
-                !write(*,'(7e14.5)') a, k, EV%outputSources(1), ISW, doppler, monopole_source, quadrupole_source
-                !write(*,'(9e14.5)') a, tau, k, doppler, sigma, sigmadot, vb, vbdot, ay(ix_vb)
-            !endif
             ang_dist = f_K(tau0-tau)
             if (tau < tau0) then
                 !E polarization source
                 EV%OutputSources(2)=visibility*polter*(15._dl/8._dl)/(ang_dist**2*k2)
                 !factor of four because no 1/16 later
 
-                !write(*,*) a, tau, k, EV%outputSources(2)
             end if
 
             if (size(EV%OutputSources) > 2) then
@@ -3054,8 +2886,6 @@
                     EV%OutputSources(3) = -2*phi*f_K(tau-State%tau_maxvis)/(f_K(tau0-State%tau_maxvis)*ang_dist)
                     !We include the lensing factor of two here
                 end if
-                !write(*,'(5e14.5)') a, k, EV%outputSources(1:3)
-                !write(*,'(5e14.5)') a, grho, grhov_t, w_dark_energy_t, de_w_bg
             end if
             if (State%num_redshiftwindows > 0) then
                 call output_window_sources(EV, EV%OutputSources, ay, ayprime, &
