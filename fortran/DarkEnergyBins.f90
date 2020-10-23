@@ -1,4 +1,5 @@
     !<pavel>
+    !DE model inspired by 1304.3724
     module DarkEnergyBins
     use DarkEnergyInterface
     use results
@@ -8,14 +9,17 @@
 
 
     type, extends(TDarkEnergyModel) :: TDarkEnergyBins
-        integer :: de_n_bins
-        integer :: de_step_type
-        integer :: de_use_perturbations
-        real(dl) :: de_overflow_cutoff
-        real(dl) :: de_cs2
-        real(dl) :: de_tau
-        real(dl), allocatable :: de_bin_ai(:)
-        real(dl), allocatable :: de_bin_amplitudes(:)
+        integer :: de_n_bins !Number of DE bins - the background rho is
+                             !multiplied by (1+delta_i) inside a redshift bin
+        integer :: de_step_type !Whether we have steps smoothed into 1/(1+exp) or smoothed tophat
+        integer :: de_use_perturbations !Whether DE has evolving perturbations
+        real(dl) :: de_overflow_cutoff !Where to cut the exp when evaluating the
+                                       !steps (against overflow and underflow)
+        real(dl) :: de_cs2 !DE soundspeed
+        real(dl) :: de_tau !Smoothing scale for the steps
+        real(dl), allocatable :: de_bin_ai(:) !Scale factors defining the steps
+        real(dl), allocatable :: de_bin_amplitudes(:) !Amplitude of individual
+                                                      !DE steps
     contains
     procedure :: ReadParams =>  TDarkEnergyBins_ReadParams
     procedure, nopass :: PythonClass => TDarkEnergyBins_PythonClass
@@ -107,7 +111,7 @@
 
     end subroutine TDarkEnergyBins_PerturbedStressEnergy
 
-    !Step function from 1/[1 + exp{ln(a/ai)/tau}]
+    !Step function (choice from two)
     function SmoothedStepFunction(a, ai, aip1, tau, step_type, cutoff)
     real(dl), intent(in) :: a, ai, aip1, tau, cutoff
     integer, intent(in) :: step_type
@@ -128,12 +132,12 @@
             else if(step_type == 2) then
                 SmoothedStepFunction = (erf(arg/sqrt(2.)) - erf(argp1/sqrt(2.)))/2.
             else
-               stop 'step' 
+               stop 'step'
             endif
         endif
     end function
 
-    !Derivative of step function from 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
+    !Derivative of step function (choice from two) wrt ln a
     function SmoothedStepFunctionDer(a, ai, aip1, tau, step_type, cutoff)
     real(dl), intent(in) :: a, ai, aip1, tau, cutoff
     integer, intent(in) :: step_type
@@ -161,7 +165,7 @@
 
     end function
 
-    !Second derivative of step function from 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
+    !Second derivative of step function (choice from two) wrt ln a
     function SmoothedStepFunctionDerDer(a, ai, aip1, tau, step_type, cutoff)
     real(dl), intent(in) :: a, ai, aip1, tau, cutoff
     integer, intent(in) :: step_type
@@ -181,7 +185,7 @@
                 SmoothedStepFunctionDerDer = 2*exp(argp1)**2/(1. + exp(argp1))**3/tau**2&
                     - exp(argp1)/(1. + exp(argp1))**2/tau**2 &
                     -2*exp(arg)**2/(1. + exp(arg))**3/tau**2 &
-                    + exp(arg)/(1. + exp(arg))**2/tau**2 
+                    + exp(arg)/(1. + exp(arg))**2/tau**2
             else if(step_type == 2) then
                 SmoothedStepFunctionDerDer = (-arg*exp(-arg**2/2.) + argp1*exp(-argp1**2/2.))/sqrt(const_twopi)/tau**2
             else

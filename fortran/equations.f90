@@ -20,6 +20,8 @@
     real(dl), intent(in) :: a
     real(dl) :: dtauda, rhonu, grhoa2, a2, grhov_t
     !<pavel>
+    !Now our DE is a function of the density of the other species, so we have to
+    !calculate it first
     real(dl) :: grhoa2_noDE
     !</pavel>
     integer :: nu_i
@@ -1252,6 +1254,10 @@
     end subroutine Nu_Intvsq
 
     !<pavel>
+    !Derivatives of the neutrino density and pressure, necessary to calculate
+    !derivatives of background density and pressure that enter the DE equation
+    !of motion for perturbations. Also adds the neutrino density and pressure
+    !to the grho, gpres
     subroutine MassiveNuVars_dot(EV,y,a,adotoa,grho,gpres,grho_dot,gpres_dot)
     implicit none
     type(EvolutionVars) EV
@@ -1332,7 +1338,6 @@
         if (present(wnu_arr)) then
             wnu_arr(nu_i) =pnu/rhonu
         end if
-
     end do
 
     end subroutine MassiveNuVars
@@ -2389,6 +2394,9 @@
 
     !<pavel>
     if (.not. EV%is_cosmological_constant) then
+        !Get coefficients necessary to calculate dw/dlna, then plug them into
+        !the DE perturbations EOM
+
         !nu_grho should be equal to grhonu_t, nu_gpres to gpres_nu
         nu_grho = 0
         nu_gpres = 0
@@ -2681,6 +2689,7 @@
     end if
 
 
+
     !  Massive neutrino equations of motion.
     if (State%CP%Num_Nu_massive >0) then
         !DIR$ LOOP COUNT MIN(1), AVG(1)
@@ -2845,12 +2854,10 @@
             tau0 = State%tau0
             phidot = (1.0d0/2.0d0)*(adotoa*(-dgpi - 2*k2*phi) + dgq*k - &
                 diff_rhopi+ k*sigma*(gpres + grho))/k2
-
             !time derivative of shear
             sigmadot = -adotoa*sigma - 1.0d0/2.0d0*dgpi/k + k*phi
             !quadrupole source derivatives; polter = pi_g/10 + 3/5 E_2
             polter = pig/10+9._dl/15*E(2)
-
             polterdot = (1.0d0/10.0d0)*pigdot + (3.0d0/5.0d0)*Edot(2)
             polterddot = -2.0d0/25.0d0*adotoa*dgq/(k*EV%Kf(1)) - 4.0d0/75.0d0*adotoa* &
                 k*sigma - 4.0d0/75.0d0*dgpi - 2.0d0/75.0d0*dgrho/EV%Kf(1) - 3.0d0/ &
@@ -2873,7 +2880,6 @@
                 !E polarization source
                 EV%OutputSources(2)=visibility*polter*(15._dl/8._dl)/(ang_dist**2*k2)
                 !factor of four because no 1/16 later
-
             end if
 
             if (size(EV%OutputSources) > 2) then
