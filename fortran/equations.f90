@@ -2407,10 +2407,6 @@
         de_Q_dot = grhom_t_dot/(State%grhov * a * a) -2*adotoa*grhom_t/(State%grhov * a * a)
         de_w_bg_dot = gpres_noDE_dot/grhom_t - gpres_noDE*grhom_t_dot/grhom_t**2
 
-        !write(*,'(13e20.8e3)') a, tau, adotoa, grhob_t, grhoc_t, grhog_t, grhor_t, nu_grho, grhom_t, State%grhov*a*a, grhom_t_dot, de_Q, de_Q_dot
-
-        !write(*,'(11e20.8e3)') a, tau, adotoa, gpres_noDE, gpres_noDE_dot, grhom_t, grhom_t_dot, de_w_bg, de_w_bg_dot, nu_grho, nu_grho_dot
-
         call State%CP%DarkEnergy%PerturbationEvolve(ayprime, w_dark_energy_t, &
         EV%w_ix, a, adotoa, k, z, ay, de_Q, de_Q_dot, de_w_bg, de_w_bg_dot)
     endif
