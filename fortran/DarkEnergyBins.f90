@@ -10,7 +10,12 @@
     type, extends(TDarkEnergyModel) :: TDarkEnergyBins
         integer :: de_n_bins
         integer :: de_step_type
-        real(dl) :: W_CUTOFF
+        integer :: de_use_perturbations
+        !-----------
+        !This is and old code from when we were considering crossing w = -1
+        !-----------
+        !!!!real(dl) :: W_CUTOFF
+        real(dl) :: de_overflow_cutoff
         real(dl) :: de_cs2
         real(dl) :: de_tau
         real(dl), allocatable :: de_bin_ai(:)
@@ -43,8 +48,13 @@
     call this%TDarkEnergyModel%ReadParams(Ini)
     !Read the number of DE bins and allocate the arrays
     this%de_n_bins  = Ini%Read_Double('DE_n_bins')
-    this%de_step_type = Ini%Read_Int('DE_step_type')
-    this%W_CUTOFF = Ini%Read_Double('DE_W_CUTOFF')
+    this%de_step_type = Ini%Read_Int('DE_step_type', 1)
+    this%de_use_perturbations = Ini%Read_Int('DE_use_perturbations', 1)
+    !-----------
+    !This is and old code from when we were considering crossing w = -1
+    !-----------
+    !!!!this%W_CUTOFF = Ini%Read_Double('DE_W_CUTOFF')
+    this%de_overflow_cutoff = Ini%Read_Double('DE_OVERFLOW_CUTOFF', 7.d2)
     allocate(this%de_bin_ai(this%de_n_bins+1))
     allocate(this%de_bin_amplitudes(this%de_n_bins))
     !Read the DE bin boundaries and amplitudes in the bin
@@ -107,8 +117,8 @@
     end subroutine TDarkEnergyBins_PerturbedStressEnergy
 
     !Step function from 1/[1 + exp{ln(a/ai)/tau}]
-    function SmoothedStepFunction(a, ai, aip1, tau, step_type)
-    real(dl), intent(in) :: a, ai, aip1, tau
+    function SmoothedStepFunction(a, ai, aip1, tau, step_type, cutoff)
+    real(dl), intent(in) :: a, ai, aip1, tau, cutoff
     integer, intent(in) :: step_type
     real(dl) :: SmoothedStepFunction
     real(dl) :: arg, argp1
@@ -116,9 +126,9 @@
         arg = log(a/ai)/tau
         argp1 = log(a/aip1)/tau
 
-        if(arg < -700 .and. argp1 < -700) then
+        if(arg < -cutoff .and. argp1 < -cutoff) then
             SmoothedStepFunction = 0
-        else if(arg > 700 .and. argp1 > 700) then
+        else if(arg > cutoff .and. argp1 > cutoff) then
             SmoothedStepFunction = 0
         else
             !We are in the step region
@@ -133,8 +143,8 @@
     end function
 
     !Derivative of step function from 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
-    function SmoothedStepFunctionDer(a, ai, aip1, tau, step_type)
-    real(dl), intent(in) :: a, ai, aip1, tau
+    function SmoothedStepFunctionDer(a, ai, aip1, tau, step_type, cutoff)
+    real(dl), intent(in) :: a, ai, aip1, tau, cutoff
     integer, intent(in) :: step_type
     real(dl) :: SmoothedStepFunctionDer
     real(dl) :: arg, argp1
@@ -142,9 +152,9 @@
         arg = log(a/ai)/tau
         argp1 = log(a/aip1)/tau
 
-        if(arg < -700 .and. argp1 < -700) then
+        if(arg < -cutoff .and. argp1 < -cutoff) then
             SmoothedStepFunctionDer = 0
-        else if(arg > 700 .and. argp1 > 700) then
+        else if(arg > cutoff .and. argp1 > cutoff) then
             SmoothedStepFunctionDer = 0
         else
             !We are in the step region
@@ -161,8 +171,8 @@
     end function
 
     !Second derivative of step function from 1/[1 + exp{ln(a/ai)/tau}] wrt ln a
-    function SmoothedStepFunctionDerDer(a, ai, aip1, tau, step_type)
-    real(dl), intent(in) :: a, ai, aip1, tau
+    function SmoothedStepFunctionDerDer(a, ai, aip1, tau, step_type, cutoff)
+    real(dl), intent(in) :: a, ai, aip1, tau, cutoff
     integer, intent(in) :: step_type
     real(dl) :: SmoothedStepFunctionDerDer
     real(dl) :: arg, argp1
@@ -170,9 +180,9 @@
         arg = log(a/ai)/tau
         argp1 = log(a/aip1)/tau
 
-        if(arg < -700 .and. argp1 < -700) then
+        if(arg < -cutoff .and. argp1 < -cutoff) then
             SmoothedStepFunctionDerDer = 0
-        else if(arg > 700 .and. argp1 > 700) then
+        else if(arg > cutoff .and. argp1 > cutoff) then
             SmoothedStepFunctionDerDer = 0
         else
             !We are in the step region
@@ -237,6 +247,29 @@
     !write(*,*) this%w_de(15d0, 0.1d0, 0.2d0, 0.5d0)
     !stop
 
+    !write(*,*) 'step'
+    !write(*,*) SmoothedStepFunction(8.9d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
+    !write(*,*) SmoothedStepFunction(8.9d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
+    !write(*,*) SmoothedStepFunction(9.0d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
+    !write(*,*) SmoothedStepFunction(9.0d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
+    !write(*,*) SmoothedStepFunction(9.1d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
+    !write(*,*) SmoothedStepFunction(9.1d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
+    !write(*,*) 'derivative'
+    !write(*,*) SmoothedStepFunctionDer(8.9d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
+    !write(*,*) SmoothedStepFunctionDer(8.9d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
+    !write(*,*) SmoothedStepFunctionDer(9.0d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
+    !write(*,*) SmoothedStepFunctionDer(9.0d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
+    !write(*,*) SmoothedStepFunctionDer(9.1d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
+    !write(*,*) SmoothedStepFunctionDer(9.1d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
+    !write(*,*) 'second derivative'
+    !write(*,*) SmoothedStepFunctionDerDer(8.9d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
+    !write(*,*) SmoothedStepFunctionDerDer(8.9d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
+    !write(*,*) SmoothedStepFunctionDerDer(9.0d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
+    !write(*,*) SmoothedStepFunctionDerDer(9.0d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
+    !write(*,*) SmoothedStepFunctionDerDer(9.1d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
+    !write(*,*) SmoothedStepFunctionDerDer(9.1d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
+    !stop
+
     grhov_t_lcdm = grhov * a * a
     delta = 0
 
@@ -247,7 +280,8 @@
         do i = 1, this%de_n_bins
 
             delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, &
-                                this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, this%de_step_type)
+                                this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
+                                this%de_step_type, this%de_overflow_cutoff)
         enddo
 
         grhov_t_beyond = delta*grho_t
@@ -305,7 +339,7 @@
 
         ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, &
                         this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
-                        this%de_step_type)
+                        this%de_step_type, this%de_overflow_cutoff)
     enddo
 
     !Eq 3 from 1304.3724
@@ -330,6 +364,12 @@
     !real(dl) :: da, dlna, am, ap, w0, wm, wp, dw_dlna
     integer :: i
 
+    if(this%de_use_perturbations == 0) then
+        ayprime(w_ix) = 0
+        ayprime(w_ix + 1) = 0
+        return
+    endif
+
     dQ_dlna = Q_dot/adotoa
     dw_bg_dlna = w_bg_dot/adotoa
 
@@ -342,15 +382,15 @@
 
         delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, &
             this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
-            this%de_step_type)
+            this%de_step_type, this%de_overflow_cutoff)
 
         ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, &
             this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
-            this%de_step_type)
+            this%de_step_type, this%de_overflow_cutoff)
 
         d2delta_d2lna = d2delta_d2lna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDerDer(a, &
             this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
-            this%de_step_type)
+            this%de_step_type, this%de_overflow_cutoff)
 
     enddo
 
@@ -378,16 +418,23 @@
     t3 = ddelta_dlna/3./denom**2*(ddelta_dlna*(1+Q)**2 + 3*Q*(1+w_bg))
     t4 = -dQ_dlna/3./denom**2*(ddelta_dlna - 3*delta*(1+delta)*(1+w_bg))
 
-    !Make sure we do not get into problems because of the singularity
-    if(abs(1+w) .ge. this%W_CUTOFF) then
-        deriv  = (t1 + t2 + t3 + t4)/(1+w)
-    !If we are far away from any DE bins, derivative is zero
-    else if(delta .le. 1e-8) then
-        deriv = 0
-    else
-        w_ratio = (1+w)/this%W_CUTOFF
-        deriv = (t1 + t2 + t3 + t4)/this%W_CUTOFF*(2*w_ratio-w_ratio**3)
-    endif
+    !-----------
+    !This is and old code from when we were considering crossing w = -1
+    !-----------
+    !!!!Make sure we do not get into problems because of the singularity
+    !!!!if(abs(1+w) .ge. this%W_CUTOFF) then
+    !!!!    deriv  = (t1 + t2 + t3 + t4)/(1+w)
+    !!!!!If we are far away from any DE bins, derivative is zero
+    !!!!else if(delta .le. 1e-8) then
+    !!!!    deriv = 0
+    !!!!else
+    !!!!    stop 'cut'
+    !!!!    w_ratio = (1+w)/this%W_CUTOFF
+    !!!!    deriv = (t1 + t2 + t3 + t4)/this%W_CUTOFF*(2*w_ratio-w_ratio**3)
+    !!!!endif
+    !-----------
+
+    deriv  = (t1 + t2 + t3 + t4)/(1+w)
 
     !density perturbation
     !Looks like there is a typo in 1806.10608: in eq 22 they have [delta] =
@@ -401,7 +448,7 @@
 
     !write(*,'(6e20.8e3)') a, k, w, deriv, ayprime(w_ix), ayprime(w_ix+1)
 
-    !if(abs(k-0.066886) < 0.002) then
+    !if(abs(k-1.26e-3) < 1e-5 .and. abs(a - 0.60652e-2) < 1e-7) then
     !    write(*,'(27e14.5)') &
     !    a, &
     !    k, &

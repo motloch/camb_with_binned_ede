@@ -2330,6 +2330,9 @@
     !if(abs(k-0.066886) < 0.002) then
     !    write(*,'(5e14.5)') a, grho, grhov_t, w_dark_energy_t, de_w_bg
     !endif
+    !if(abs(k-0.108732) < 1e-3) then
+    !    write(*,'(15e16.7)') a, tau, grho, grhov_t, w_dark_energy_t, de_w_bg
+    !endif
     !</pavel>
     gpres_noDE = gpres_nu + (grhor_t + grhog_t)/3
 
@@ -2482,6 +2485,10 @@
     ! Easy to see instability in k \sim 1e-3 by tracking evolution of vb
 
     !  Use explicit equation for vb if appropriate
+
+    !if(abs(k-0.108732) < 1e-3) then
+    !    write(*,'(3e16.7,3l)') k, tau, a, EV%TightCoupling
+    !endif
 
     if (EV%TightCoupling) then
         !  ddota/a
@@ -2851,9 +2858,34 @@
     !    endif
     !endif
 
-    !if(abs(k-0.011933) < 0.001) then
-    !    write(*,'(8e14.5)') a, k, ay(ix_etak), ay(EV%g_ix), ay(EV%g_ix+1), &
-    !        ay(ix_clxc), ay(ix_clxb), ay(ix_vb)
+    !if(abs(k-1.26e-3) < 1e-5 .and. abs(tau - 996.07) < 0.01) then
+    !    write(*,'(48e16.7)') a, tau, EV%k_buf, &
+    !        ay(ix_etak), ay(EV%g_ix), ay(EV%g_ix+1), &
+    !        ay(EV%g_ix+2), ay(ix_clxc), ay(ix_clxb), &
+    !        ay(ix_vb), ay(EV%w_ix), ay(EV%w_ix+1), &
+    !        ayprime(ix_etak), ayprime(EV%g_ix), ayprime(EV%g_ix+1), &
+    !        ayprime(EV%g_ix+2), ayprime(ix_clxc), ayprime(ix_clxb), &
+    !        ayprime(ix_vb), ayprime(EV%w_ix), ayprime(EV%w_ix+1)
+    !endif
+
+    !if(abs(k-0.108732) < 1e-6 .and. abs(tau - 280) < 50) then
+    !    write(*,'(48e16.7)') a, tau, EV%k_buf, &
+    !        ay(ix_etak), ay(EV%g_ix), ay(EV%g_ix+1), &
+    !        ay(EV%g_ix+2), ay(ix_clxc), ay(ix_clxb), &
+    !        ay(ix_vb), ay(EV%w_ix), ay(EV%w_ix+1), &
+    !        ayprime(ix_etak), ayprime(EV%g_ix), ayprime(EV%g_ix+1), &
+    !        ayprime(EV%g_ix+2), ayprime(ix_clxc), ayprime(ix_clxb), &
+    !        ayprime(ix_vb), ayprime(EV%w_ix), ayprime(EV%w_ix+1)
+    !endif
+
+    !if(abs(EV%k_buf-0.108732) < 1e-3 .and. tau < 200) then
+    !    write(*,'(48e17.8e3)') a, tau, EV%k_buf, z, &
+    !        ay(ix_etak), ay(EV%g_ix), ay(EV%g_ix+1), &
+    !        ay(EV%g_ix+2), ay(ix_clxc), ay(ix_clxb), &
+    !        ay(ix_vb), ay(EV%w_ix), ay(EV%w_ix+1), &
+    !        ayprime(ix_etak), ayprime(EV%g_ix), ayprime(EV%g_ix+1), &
+    !        ayprime(EV%g_ix+2), ayprime(ix_clxc), ayprime(ix_clxb), &
+    !        ayprime(ix_vb), ayprime(EV%w_ix), ayprime(EV%w_ix+1)
     !endif
 
     if (associated(EV%OutputTransfer) .or. associated(EV%OutputSources)) then
@@ -2968,6 +3000,15 @@
             sigmadot = -adotoa*sigma - 1.0d0/2.0d0*dgpi/k + k*phi
             !quadrupole source derivatives; polter = pi_g/10 + 3/5 E_2
             polter = pig/10+9._dl/15*E(2)
+
+            !if(abs(EV%k_buf-1.26e-3) < 1e-5) then
+            !    if(EV%tightCoupling)then
+            !        write(*,'(17e14.5)') a, tau, k, pig, E(2), polter, 1._dl
+            !    else
+            !        write(*,'(17e14.5)') a, tau, k, pig, E(2), polter, 0._dl
+            !    endif
+            !endif
+
             polterdot = (1.0d0/10.0d0)*pigdot + (3.0d0/5.0d0)*Edot(2)
             polterddot = -2.0d0/25.0d0*adotoa*dgq/(k*EV%Kf(1)) - 4.0d0/75.0d0*adotoa* &
                 k*sigma - 4.0d0/75.0d0*dgpi - 2.0d0/75.0d0*dgrho/EV%Kf(1) - 3.0d0/ &
@@ -2985,6 +3026,11 @@
                 + (k**2*polter + 3*polterddot)*visibility)/k**2
 
             EV%OutputSources(1) = ISW + doppler + monopole_source + quadrupole_source
+            !if(abs(k-0.108732) < 1e-3) then
+                !write(*,'(8e16.7)') a, tau, k, EV%outputSources(1), ISW, doppler, monopole_source, quadrupole_source
+                !write(*,'(9e14.5)') a, tau, k, -etak/(k*EV%Kf(1)), 2*phi, clxg/4
+            !endif
+
             !if(abs(k-0.011933) < 0.001) then
                 !write(*,'(7e14.5)') a, k, EV%outputSources(1), ISW, doppler, monopole_source, quadrupole_source
                 !write(*,'(9e14.5)') a, tau, k, doppler, sigma, sigmadot, vb, vbdot, ay(ix_vb)
@@ -2998,6 +3044,8 @@
                 !E polarization source
                 EV%OutputSources(2)=visibility*polter*(15._dl/8._dl)/(ang_dist**2*k2)
                 !factor of four because no 1/16 later
+
+                !write(*,*) a, tau, k, EV%outputSources(2)
             end if
 
             if (size(EV%OutputSources) > 2) then

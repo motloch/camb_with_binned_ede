@@ -164,31 +164,58 @@
     end subroutine splint
 
     !<pavel>
-    !subroutine pavel_output(EV,n,tau,ay,ayprime)
-    !!use constants, only : barssc0, Compton_CT, line21_const
-    !!use MassiveNu
-    !!use Recombination
-    !use GaugeInterface, only : EvolutionVars
-    !implicit none
-    !type(EvolutionVars) EV
-    !integer n
-    !integer, parameter :: dl = KIND(1.d0)
-    !real(dl) ay(n),ayprime(n)
-    !real(dl) tau
-    !real(dl) a
-    !real(dl) opacity, cs2, dopacity
+    subroutine pavel_output(EV,n,tau,ay,ayprime)
+    !use constants, only : barssc0, Compton_CT, line21_const
+    !use MassiveNu
+    !use Recombination
+    use GaugeInterface, only : EvolutionVars
+    implicit none
+    type(EvolutionVars) EV
+    integer n
+    integer, parameter :: dl = KIND(1.d0)
+    real(dl) ay(n),ayprime(n)
+    real(dl) tau
+    real(dl) a
+    real(dl) opacity, cs2, dopacity
+    integer, parameter :: ix_etak=1, ix_clxc=2, ix_clxb=3, ix_vb=4 !Scalar array indices for each quantity
 
-    !!  Get background scale factor, sound speed and ionisation fraction.
-    !!if (EV%TightCoupling) then
-    !!call EV%ThermoData%Values(tau,a,cs2,opacity)
-    !!else
-    !!    call EV%ThermoData%Values(tau,a,cs2,opacity)
-    !!end if
+    !  Get background scale factor, sound speed and ionisation fraction.
+    !if (EV%TightCoupling) then
+    !call EV%ThermoData%Values(tau,a,cs2,opacity)
+    !else
+    !    call EV%ThermoData%Values(tau,a,cs2,opacity)
+    !end if
 
     !if(abs(EV%k_buf-0.066886) < 0.002) then
     !    write(*,'(1e17.8, 17e14.5)') tau, EV%k_buf, ay(EV%w_ix), ay(EV%w_ix+1)
     !endif
-    !end subroutine
+
+    !if(abs(EV%k_buf-1.26e-3) < 1e-5) then
+    !    write(*,'(18e14.5)') tau, EV%k_buf, ay(ix_etak), ay(EV%g_ix), ay(EV%g_ix+1), &
+    !        ay(EV%g_ix+2), ay(ix_clxc), ay(ix_clxb), ay(ix_vb), ay(EV%w_ix), &
+    !        ay(EV%w_ix+1)
+    !endif
+
+    !if(abs(EV%k_buf-1.26e-3) < 1e-5 .and. abs(tau - 996) < 1) then
+    !    write(*,'(48e14.5)') tau, EV%k_buf, &
+    !        ay(ix_etak), ay(EV%g_ix), ay(EV%g_ix+1), &
+    !        ay(EV%g_ix+2), ay(ix_clxc), ay(ix_clxb), &
+    !        ay(ix_vb), ay(EV%w_ix), ay(EV%w_ix+1), &
+    !        ayprime(ix_etak), ayprime(EV%g_ix), ayprime(EV%g_ix+1), &
+    !        ayprime(EV%g_ix+2), ayprime(ix_clxc), ayprime(ix_clxb), &
+    !        ayprime(ix_vb), ayprime(EV%w_ix), ayprime(EV%w_ix+1)
+    !endif
+
+    if(abs(EV%k_buf-0.108732) < 1e-3) then
+        write(*,'(48e17.8e3)') tau, EV%k_buf, &
+            ay(ix_etak), ay(EV%g_ix), ay(EV%g_ix+1), &
+            ay(EV%g_ix+2), ay(ix_clxc), ay(ix_clxb), &
+            ay(ix_vb), ay(EV%w_ix), ay(EV%w_ix+1), &
+            ayprime(ix_etak), ayprime(EV%g_ix), ayprime(EV%g_ix+1), &
+            ayprime(EV%g_ix+2), ayprime(ix_clxc), ayprime(ix_clxb), &
+            ayprime(ix_vb), ayprime(EV%w_ix), ayprime(EV%w_ix+1)
+    endif
+    end subroutine
     !</pavel>
 
 
