@@ -1477,13 +1477,6 @@
         fac(j)=fac(j)**2*aa(j)/6
     end do
 
-    !<pavel>
-    !do j=1,max_bessels_l_index
-    !    write(*,*) j, ThisCT%ls%l(j)
-    !enddo
-    !stop
-    !</pavel>
-
     do j=1,max_bessels_l_index
         if (ThisCT%ls%l(j) > llmax) return
         xlim=xlimfrac*ThisCT%ls%l(j)
@@ -1545,16 +1538,6 @@
                         sums(1) = sums(1) + IV%Source_q(n,1)*J_l
                         sums(2) = sums(2) + IV%Source_q(n,2)*J_l
                         sums(3) = sums(3) + IV%Source_q(n,3)*J_l
-                        !<pavel>
-                        !if(j == 9 .and. IV%q_ix == 119) then
-                        !    write(*,'(1i5,9es18.9e3)') n, IV%q, State%TimeSteps%points(n), &
-                        !           IV%Source_q(n,2)*J_l, IV%Source_q(n,2), J_l
-                        !endif
-                        !if(j == 107 .and. IV%q_ix == 1790) then
-                        !    write(*,'(1i5,9es18.9e3)') n, IV%q, State%TimeSteps%points(n), &
-                        !           IV%Source_q(n,1)*J_l, IV%Source_q(n,1), J_l
-                        !endif
-                        !</pavel>
                     end do
                 else
                     if (State%num_redshiftwindows>0) then
@@ -1646,12 +1629,6 @@
         end if
 
         ThisCT%Delta_p_l_k(:,j,IV%q_ix) = ThisCT%Delta_p_l_k(:,j,IV%q_ix) + sums
-        !<pavel>
-        !if(j == 9 .and. IV%q_ix == 119) then
-        !    write(*,'(2i5,9es18.9e3)') j, IV%q_ix, &
-        !        ThisCT%Delta_p_l_k(2,j,IV%q_ix), sums(2)
-        !endif
-        !</pavel>
     end do
 
     end subroutine DoFlatIntegration
@@ -2268,18 +2245,6 @@
 
                     iCl_scalar(j,C_Temp:C_E) = iCl_scalar(j,C_Temp:C_E) +  &
                         apowers*CTrans%Delta_p_l_k(1:2,j,q_ix)**2*dlnk
-                    !<pavel>
-                    !if(j < 20) then
-                    !    write(*,'(3i5,9es18.9e3)') j, q_ix, CTrans%ls%l(j),&
-                    !        apowers*CTrans%Delta_p_l_k(2,j,q_ix)**2*dlnk, &
-                    !        apowers, dlnk
-                    !endif
-                    !if(j .eq. 107) then
-                    !    write(*,'(2i5,9es18.9e3)') q_ix, CTrans%ls%l(j),&
-                    !        apowers*CTrans%Delta_p_l_k(1,j,q_ix)**2*dlnk, &
-                    !        apowers, dlnk
-                    !endif
-                    !</pavel>
                     iCl_scalar(j,C_Cross) = iCl_scalar(j,C_Cross) + &
                         apowers*CTrans%Delta_p_l_k(1,j,q_ix)*CTrans%Delta_p_l_k(2,j,q_ix)*dlnk
 

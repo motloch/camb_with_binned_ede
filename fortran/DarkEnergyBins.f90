@@ -11,10 +11,6 @@
         integer :: de_n_bins
         integer :: de_step_type
         integer :: de_use_perturbations
-        !-----------
-        !This is and old code from when we were considering crossing w = -1
-        !-----------
-        !!!!real(dl) :: W_CUTOFF
         real(dl) :: de_overflow_cutoff
         real(dl) :: de_cs2
         real(dl) :: de_tau
@@ -28,7 +24,6 @@
     procedure :: w_de => TDarkEnergyBins_w_de
     procedure :: grho_de => TDarkEnergyBins_grho_de
     procedure :: PerturbedStressEnergy => TDarkEnergyBins_PerturbedStressEnergy
-    !procedure :: diff_rhopi_Add_Term => TDarkEnergyBins_diff_rhopi_Add_Term
     procedure :: PerturbationEvolve => TDarkEnergyBins_PerturbationEvolve
     procedure :: BackgroundDensityAndPressure => TDarkEnergyBins_BackgroundDensityAndPressure
     end type TDarkEnergyBins
@@ -50,10 +45,6 @@
     this%de_n_bins  = Ini%Read_Double('DE_n_bins')
     this%de_step_type = Ini%Read_Int('DE_step_type', 1)
     this%de_use_perturbations = Ini%Read_Int('DE_use_perturbations', 1)
-    !-----------
-    !This is and old code from when we were considering crossing w = -1
-    !-----------
-    !!!!this%W_CUTOFF = Ini%Read_Double('DE_W_CUTOFF')
     this%de_overflow_cutoff = Ini%Read_Double('DE_OVERFLOW_CUTOFF', 7.d2)
     allocate(this%de_bin_ai(this%de_n_bins+1))
     allocate(this%de_bin_amplitudes(this%de_n_bins))
@@ -212,64 +203,6 @@
     real(dl) :: delta, Q
     integer :: i
 
-    !Checks
-    !write(*,*) 'a = 1e-7'
-    !write(*,*) SmoothedStepFunction(1d-7, 0.1d0, 0.08d0)
-    !write(*,*) SmoothedStepFunctionDer(1d-7, 0.1d0, 0.08d0)
-    !write(*,*) SmoothedStepFunctionDerDer(1d-7, 0.1d0, 0.08d0)
-    !write(*,*) 'a = 0.05'
-    !write(*,*) SmoothedStepFunction(0.05d0, 0.1d0, 0.08d0)
-    !write(*,*) SmoothedStepFunctionDer(0.05d0, 0.1d0, 0.08d0)
-    !write(*,*) SmoothedStepFunctionDerDer(0.05d0, 0.1d0, 0.08d0)
-    !write(*,*) 'a = 0.1'
-    !write(*,*) SmoothedStepFunction(0.1d0, 0.1d0, 0.08d0)
-    !write(*,*) SmoothedStepFunctionDer(0.1d0, 0.1d0, 0.08d0)
-    !write(*,*) SmoothedStepFunctionDerDer(0.1d0, 0.1d0, 0.08d0)
-    !write(*,*) 'a = 0.15'
-    !write(*,*) SmoothedStepFunction(0.15d0, 0.1d0, 0.08d0)
-    !write(*,*) SmoothedStepFunctionDer(0.15d0, 0.1d0, 0.08d0)
-    !write(*,*) SmoothedStepFunctionDerDer(0.15d0, 0.1d0, 0.08d0)
-    !write(*,*) 'a = 15'
-    !write(*,*) SmoothedStepFunction(15d0, 0.1d0, 0.08d0)
-    !write(*,*) SmoothedStepFunctionDer(15d0, 0.1d0, 0.08d0)
-    !write(*,*) SmoothedStepFunctionDerDer(15d0, 0.1d0, 0.08d0)
-    !stop
-
-    !write(*,*) 'a = 1e-7'
-    !write(*,*) this%w_de(1d-7, 0.1d0, 0.2d0, 0.5d0)
-    !write(*,*) 'a = 0.05'
-    !write(*,*) this%w_de(5d-2, 0.1d0, 0.2d0, 0.5d0)
-    !write(*,*) 'a = 0.1'
-    !write(*,*) this%w_de(1d-1, 0.1d0, 0.2d0, 0.5d0)
-    !write(*,*) 'a = 0.15'
-    !write(*,*) this%w_de(1.5d-1, 0.1d0, 0.2d0, 0.5d0)
-    !write(*,*) 'a = 15'
-    !write(*,*) this%w_de(15d0, 0.1d0, 0.2d0, 0.5d0)
-    !stop
-
-    !write(*,*) 'step'
-    !write(*,*) SmoothedStepFunction(8.9d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
-    !write(*,*) SmoothedStepFunction(8.9d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
-    !write(*,*) SmoothedStepFunction(9.0d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
-    !write(*,*) SmoothedStepFunction(9.0d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
-    !write(*,*) SmoothedStepFunction(9.1d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
-    !write(*,*) SmoothedStepFunction(9.1d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
-    !write(*,*) 'derivative'
-    !write(*,*) SmoothedStepFunctionDer(8.9d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
-    !write(*,*) SmoothedStepFunctionDer(8.9d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
-    !write(*,*) SmoothedStepFunctionDer(9.0d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
-    !write(*,*) SmoothedStepFunctionDer(9.0d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
-    !write(*,*) SmoothedStepFunctionDer(9.1d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
-    !write(*,*) SmoothedStepFunctionDer(9.1d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
-    !write(*,*) 'second derivative'
-    !write(*,*) SmoothedStepFunctionDerDer(8.9d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
-    !write(*,*) SmoothedStepFunctionDerDer(8.9d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
-    !write(*,*) SmoothedStepFunctionDerDer(9.0d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
-    !write(*,*) SmoothedStepFunctionDerDer(9.0d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
-    !write(*,*) SmoothedStepFunctionDerDer(9.1d-5, 0.0000891251d0, 1d-4, 0.00375d0, 1)
-    !write(*,*) SmoothedStepFunctionDerDer(9.1d-5, 0.0000891251d0, 1d-4, 0.00375d0*1.6, 2)
-    !stop
-
     grhov_t_lcdm = grhov * a * a
     delta = 0
 
@@ -294,10 +227,6 @@
                 stop 'w_bg'
             else
                 w = this%w_de(a, delta, Q, w_bg)
-                !write(*,'(5e20.8e3)') a, delta, Q, w_bg, w
-                !if(abs(a-1.78e-4) < 3e-6) then
-                !    write(*,'(17e14.5)') a, delta, Q, w_bg, w
-                !endif
             endif
         endif
 
@@ -361,7 +290,6 @@
     real(dl) :: denom, t1, t2, t3, t4
     real(dl) :: w0
     real(dl) :: w_ratio
-    !real(dl) :: da, dlna, am, ap, w0, wm, wp, dw_dlna
     integer :: i
 
     if(this%de_use_perturbations == 0) then
@@ -394,21 +322,7 @@
 
     enddo
 
-    !write(*,'(7e20.8e3)') a, delta, ddelta_dlna, Q, dQ_dlna, w_bg, dw_bg_dlna
-
-    !This was just a check
-    !da = 0.002*a
-    !dlna = da/a
-    !wm = this%w_de(a - da, delta - ddelta_dlna*dlna, Q - dQ_dlna*dlna, w_bg-dw_bg_dlna*dlna)
     w0 = this%w_de(a, delta, Q, w_bg)
-    !!write(*,'(5e20.8e3)') a, delta, Q, w_bg, w0
-    !wp = this%w_de(a + da, delta + ddelta_dlna*dlna, Q + dQ_dlna*dlna, w_bg+dw_bg_dlna*dlna)
-    !dw_dlna = (wp - wm)/2./dlna
-    !if(abs(1+w) .ge. 1e-6) then
-    !    dw_dlna = dw_dlna/(1+w)
-    !else
-    !    dw_dlna = 0
-    !endif
 
     Hv3_over_k =  3*adotoa* y(w_ix + 1) / k
     ! dw/dlog a/(1+w) - derivative of Eq 3 from 1304.3724
@@ -417,22 +331,6 @@
     t2 = delta*Q*dw_bg_dlna/denom
     t3 = ddelta_dlna/3./denom**2*(ddelta_dlna*(1+Q)**2 + 3*Q*(1+w_bg))
     t4 = -dQ_dlna/3./denom**2*(ddelta_dlna - 3*delta*(1+delta)*(1+w_bg))
-
-    !-----------
-    !This is and old code from when we were considering crossing w = -1
-    !-----------
-    !!!!Make sure we do not get into problems because of the singularity
-    !!!!if(abs(1+w) .ge. this%W_CUTOFF) then
-    !!!!    deriv  = (t1 + t2 + t3 + t4)/(1+w)
-    !!!!!If we are far away from any DE bins, derivative is zero
-    !!!!else if(delta .le. 1e-8) then
-    !!!!    deriv = 0
-    !!!!else
-    !!!!    stop 'cut'
-    !!!!    w_ratio = (1+w)/this%W_CUTOFF
-    !!!!    deriv = (t1 + t2 + t3 + t4)/this%W_CUTOFF*(2*w_ratio-w_ratio**3)
-    !!!!endif
-    !-----------
 
     deriv  = (t1 + t2 + t3 + t4)/(1+w)
 
@@ -446,50 +344,7 @@
     ayprime(w_ix + 1) = -adotoa * (1 - 3 * this%de_cs2 - deriv) * y(w_ix + 1) + &
         k * this%de_cs2 * y(w_ix)
 
-    !write(*,'(6e20.8e3)') a, k, w, deriv, ayprime(w_ix), ayprime(w_ix+1)
-
-    !if(abs(k-1.26e-3) < 1e-5 .and. abs(a - 0.60652e-2) < 1e-7) then
-    !    write(*,'(27e14.5)') &
-    !    a, &
-    !    k, &
-    !    ayprime(w_ix), &
-    !    ayprime(w_ix+1), &
-    !    - 3 * adotoa * (this%de_cs2 - w) *  (y(w_ix) + Hv3_over_k), &
-    !    -   k * y(w_ix + 1), &
-    !    - (1 + w) * k * z, &
-    !    - adotoa*deriv* Hv3_over_k,&
-    !    - adotoa * (1 - 3 * this%de_cs2 - deriv) * y(w_ix + 1), &
-    !      k * this%de_cs2 * y(w_ix),&
-    !      adotoa, &
-    !      Hv3_over_k, &
-    !      w, &
-    !      deriv, &
-    !      w0
-    !endif
-
     end subroutine TDarkEnergyBins_PerturbationEvolve
-
-    !function TDarkEnergyBins_diff_rhopi_Add_Term(this, dgrhoe, dgqe, grho, gpres, w,  grhok, adotoa, &
-    !    Kf1, k, grhov_t, z, k2, yprime, y, w_ix) result(ppiedot)
-    !!Get derivative of anisotropic stress
-    !class(TDarkEnergyBins), intent(in) :: this
-    !real(dl), intent(in) :: dgrhoe, dgqe, grho, gpres, w, grhok, adotoa, &
-    !    k, grhov_t, z, k2, yprime(:), y(:), Kf1
-    !integer, intent(in) :: w_ix
-    !real(dl) :: ppiedot, hdotoh
-
-    !if (this%is_cosmological_constant) then
-    !    ppiedot = 0
-    !else
-    !    hdotoh = (-3._dl * grho - 3._dl * gpres - 2._dl * grhok) / 6._dl / adotoa
-    !    ppiedot = 3._dl * dgrhoe + dgqe * &
-    !        (12._dl / k * adotoa + k / adotoa - 3._dl / k * (adotoa + hdotoh)) + &
-    !        grhov_t * (1 + w) * k * z / adotoa - 2._dl * k2 * Kf1 * &
-    !        (yprime(w_ix) / adotoa - 2._dl * y(w_ix))
-    !    ppiedot = ppiedot * adotoa / Kf1
-    !end if
-
-    !end function TDarkEnergyBins_diff_rhopi_Add_Term
 
     end module DarkEnergyBins
     !</pavel>
