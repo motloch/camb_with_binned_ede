@@ -338,6 +338,12 @@
 
     deriv  = (t1 + t2 + t3 + t4)/(1+w)
 
+    !TEST 6
+    !if(abs(k - 0.524) < 0.002) then
+    !    write(*,'(48e19.6)') a, deriv
+    !endif
+    !</pavel>
+
     !density perturbation
     !Looks like there is a typo in 1806.10608: in eq 22 they have [delta] =
     ![theta/k^2], in eq 23 they have [delta] = [theta H / k^2]

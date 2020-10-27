@@ -46,6 +46,11 @@
     grhoa2 = grhoa2_noDE + grhov_t * a2
     !</pavel>
 
+    !<pavel>
+    !TEST 1
+    !write(*,'(48e19.6)') a, grhoa2
+    !</pavel>
+
     dtauda = sqrt(3 / grhoa2)
 
     end function dtauda
@@ -2315,6 +2320,13 @@
     end if
     !</pavel>
 
+    !<pavel>
+    !TEST 2, 3
+    !if(abs(k - 0.524) < 0.002) then
+    !    write(*,'(48e19.6)') a, k, grhoc_t, grhob_t, grhog_t, grhor_t, grhonu_t, grhov_t, w_dark_energy_t
+    !endif
+    !</pavel>
+
     grho_matter=grhonu_t+grhob_t+grhoc_t
     grho = grho_matter+grhor_t+grhog_t+grhov_t
     gpres_noDE = gpres_nu + (grhor_t + grhog_t)/3
@@ -2404,6 +2416,13 @@
         nu_gpres_dot = 0
         call MassiveNuVars_dot(EV,ay,a,adotoa,nu_grho,nu_gpres,nu_grho_dot,nu_gpres_dot)
 
+        !<pavel>
+        !TEST 4
+        !if(abs(k - 0.524) < 0.002) then
+        !    write(*,'(48e19.6)') a, tau, k, nu_grho, nu_gpres, nu_grho_dot, nu_gpres_dot
+        !endif
+        !</pavel>
+
         grhom_t = grhob_t + grhoc_t + grhog_t + grhor_t + nu_grho
         !Notice that coefficient for baryons is not -3, because of additional a^2
         grhom_t_dot = adotoa*(-grhob_t -grhoc_t -2*grhog_t - 2*grhor_t) + nu_grho_dot
@@ -2414,6 +2433,14 @@
 
         de_Q_dot = grhom_t_dot/(State%grhov * a * a) -2*adotoa*grhom_t/(State%grhov * a * a)
         de_w_bg_dot = gpres_noDE_dot/grhom_t - gpres_noDE*grhom_t_dot/grhom_t**2
+
+        !<pavel>
+        !TEST 5
+        !if(abs(k - 0.524) < 0.002) then
+        !    write(*,'(48e19.6)') a, tau, k, grhom_t, grhom_t_dot, gpres_noDE_dot, &
+        !        de_Q, de_w_bg, de_Q_dot, de_w_bg_dot
+        !endif
+        !</pavel>
 
         call State%CP%DarkEnergy%PerturbationEvolve(ayprime, w_dark_energy_t, &
         EV%w_ix, a, adotoa, k, z, ay, de_Q, de_Q_dot, de_w_bg, de_w_bg_dot)
