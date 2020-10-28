@@ -9,17 +9,6 @@
 
 
     type, extends(TDarkEnergyModel) :: TDarkEnergyBins
-        integer :: de_n_bins !Number of DE bins - the background rho is
-                             !multiplied by (1+delta_i) inside a redshift bin
-        integer :: de_step_type !Whether we have steps smoothed into 1/(1+exp) or smoothed tophat
-        integer :: de_use_perturbations !Whether DE has evolving perturbations
-        real(dl) :: de_overflow_cutoff !Where to cut the exp when evaluating the
-                                       !steps (against overflow and underflow)
-        real(dl) :: de_cs2 !DE soundspeed
-        real(dl) :: de_tau !Smoothing scale for the steps
-        real(dl), allocatable :: de_bin_ai(:) !Scale factors defining the steps
-        real(dl), allocatable :: de_bin_amplitudes(:) !Amplitude of individual
-                                                      !DE steps
     contains
     procedure :: ReadParams =>  TDarkEnergyBins_ReadParams
     procedure, nopass :: PythonClass => TDarkEnergyBins_PythonClass
