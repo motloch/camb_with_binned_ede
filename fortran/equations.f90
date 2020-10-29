@@ -2325,6 +2325,11 @@
     !if(abs(k - 0.524) < 0.002) then
     !    write(*,'(48e19.6)') a, k, grhoc_t, grhob_t, grhog_t, grhor_t, grhonu_t, grhov_t, w_dark_energy_t
     !endif
+
+    !TEST COSMOMC
+    !if(abs(k - 0.524) < 0.02) then
+    !    write(*,'(48e19.6)') a, k, grhoc_t,grhob_t,grhog_t,grhor_t,grhonu_t,grhov_t
+    !endif
     !</pavel>
 
     grho_matter=grhonu_t+grhob_t+grhoc_t

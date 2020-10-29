@@ -319,13 +319,22 @@
 
     Hv3_over_k =  3*adotoa* y(w_ix + 1) / k
     ! dw/dlog a/(1+w) - derivative of Eq 3 from 1304.3724
-    denom = 1 + delta + delta*Q
-    t1 = -(1+Q)/3.*d2delta_d2lna/denom
-    t2 = delta*Q*dw_bg_dlna/denom
-    t3 = ddelta_dlna/3./denom**2*(ddelta_dlna*(1+Q)**2 + 3*Q*(1+w_bg))
-    t4 = -dQ_dlna/3./denom**2*(ddelta_dlna - 3*delta*(1+delta)*(1+w_bg))
 
-    deriv  = (t1 + t2 + t3 + t4)/(1+w)
+    !We expect there is no phantom crossing
+    if(1+w < 0) then
+        stop 'w'
+    !Allows us to run LCDM with the same code
+    else if(1+w .eq. 0) then
+        deriv = 0
+    else
+        denom = 1 + delta + delta*Q
+        t1 = -(1+Q)/3.*d2delta_d2lna/denom
+        t2 = delta*Q*dw_bg_dlna/denom
+        t3 = ddelta_dlna/3./denom**2*(ddelta_dlna*(1+Q)**2 + 3*Q*(1+w_bg))
+        t4 = -dQ_dlna/3./denom**2*(ddelta_dlna - 3*delta*(1+delta)*(1+w_bg))
+
+        deriv  = (t1 + t2 + t3 + t4)/(1+w)
+    endif
 
     !TEST 6
     !if(abs(k - 0.524) < 0.002) then
