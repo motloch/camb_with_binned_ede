@@ -301,6 +301,34 @@
 
     end subroutine CAMBdata_SelfPointer
 
+    !<pavel>
+    !Step function (choice from two)
+    function SmoothedStepFunctionInResults(a, ai, aip1, tau, step_type, cutoff)
+    real(dl), intent(in) :: a, ai, aip1, tau, cutoff
+    integer, intent(in) :: step_type
+    real(dl) :: SmoothedStepFunctionInResults
+    real(dl) :: arg, argp1
+
+        arg = log(a/ai)/tau
+        argp1 = log(a/aip1)/tau
+
+        if(arg < -cutoff .and. argp1 < -cutoff) then
+            SmoothedStepFunctionInResults = 0
+        else if(arg > cutoff .and. argp1 > cutoff) then
+            SmoothedStepFunctionInResults = 0
+        else
+            !We are in the step region
+            if(step_type == 1) then
+                SmoothedStepFunctionInResults = (exp(arg) - exp(argp1))/(1. + exp(argp1))/(1. + exp(arg))
+            else if(step_type == 2) then
+                SmoothedStepFunctionInResults = (erf(arg/sqrt(2.)) - erf(argp1/sqrt(2.)))/2.
+            else
+               stop 'step'
+            endif
+        endif
+    end function
+    !</pavel>
+
     subroutine CAMBdata_SetParams(this, P, error, DoReion, call_again, background_only)
     !Initialize background variables; does not yet calculate thermal history
     use constants
@@ -316,6 +344,10 @@
     real(dl) zpeak, sigma_z, zpeakstart, zpeakend
     Type(TRedWin), pointer :: Win
     logical back_only
+    !<pavel>
+    real(dl) Omega_allDE, Omega_nonDE, delta
+    integer :: i
+    !</pavel>
     !Constants in SI units
 
     global_error_flag = 0
@@ -450,8 +482,24 @@
         this%grhoc=this%grhocrit*this%CP%omch2/h2
         this%grhob=this%grhocrit*this%CP%ombh2/h2
         this%grhok=this%grhocrit*this%CP%omk
-        this%Omega_de = 1 -(this%CP%omch2 + this%CP%ombh2 + this%CP%omnuh2)/h2 - this%CP%omk  &
-            - (this%grhornomass + this%grhog)/this%grhocrit
+        !<pavel>
+        Omega_nonDE = (this%CP%omch2 + this%CP%ombh2 + this%CP%omnuh2)/h2 &
+            + (this%grhornomass + this%grhog)/this%grhocrit
+        Omega_allDE = 1 - Omega_nonDE - this%CP%omk
+        delta = 0
+        !Get contributions from each of the dark energy bins
+        do i = 1, this%CP%DarkEnergy%de_n_bins
+            delta = delta + this%CP%DarkEnergy%de_bin_amplitudes(i)*&
+                            SmoothedStepFunctionInResults(1.d0, &
+                                this%CP%DarkEnergy%de_bin_ai(i), &
+                                this%CP%DarkEnergy%de_bin_ai(i+1), &
+                                this%CP%DarkEnergy%de_tau, &
+                                this%CP%DarkEnergy%de_step_type, &
+                                this%CP%DarkEnergy%de_overflow_cutoff)
+        enddo
+        !It is called Omega_de, but in reality it is Omega_lambda
+        this%Omega_de = (Omega_allDE - Omega_nonDE*delta)/(1 + delta)
+        !</pavel>
         this%grhov=this%grhocrit*this%Omega_de
 
         !  adotrad gives da/dtau in the asymptotic radiation-dominated era:
@@ -480,7 +528,11 @@
         end if
         call this%CP%DarkEnergy%Init(this)
         if (global_error_flag==0) then
-            this%tau0=this%TimeOfz(0._dl)
+            !<pavel>
+            !To avoid ``mismatch in integrated times''
+            this%tau0=this%TimeOfz(0._dl, 1d-8)
+            !</pavel>
+            write(*,*) this%tau0
             this%chi0=this%rofChi(this%tau0/this%curvature_radius)
             this%scale= this%chi0*this%curvature_radius/this%tau0  !e.g. change l sampling depending on approx peak spacing
             if (this%closed .and. this%tau0/this%curvature_radius >3.14) then
