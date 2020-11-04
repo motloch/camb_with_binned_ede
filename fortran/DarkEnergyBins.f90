@@ -100,10 +100,101 @@
 
     end subroutine TDarkEnergyBins_PerturbedStressEnergy
 
-    !Step function (choice from two)
-    function SmoothedStepFunction(a, ai, aip1, tau, step_type, cutoff)
+    !Top function (choice from two)
+    function SmoothedTopFunction(a, ai, aip1, tau, step_type, cutoff)
     real(dl), intent(in) :: a, ai, aip1, tau, cutoff
     integer, intent(in) :: step_type
+    real(dl) :: SmoothedTopFunction
+    real(dl) :: arg, argp1
+    real(dl) :: exparg, expargp1
+
+        arg = log(a/ai)/tau
+        argp1 = log(a/aip1)/tau
+
+        if(arg < -cutoff .and. argp1 < -cutoff) then
+            SmoothedTopFunction = 0
+        else if(arg > cutoff .and. argp1 > cutoff) then
+            SmoothedTopFunction = 0
+        else
+            !We are in the step region
+            if(step_type == 1) then
+                exparg = exp(arg)
+                expargp1 = exp(argp1)
+                SmoothedTopFunction = (exparg - expargp1)/(1. + expargp1)/(1. + exparg)
+            else if(step_type == 2) then
+                SmoothedTopFunction = (erf(arg/sqrt(2.)) - erf(argp1/sqrt(2.)))/2.
+            else
+               stop 'step'
+            endif
+        endif
+    end function
+
+    !Derivative of step function (choice from two) wrt ln a
+    function SmoothedTopFunctionDer(a, ai, aip1, tau, step_type, cutoff)
+    real(dl), intent(in) :: a, ai, aip1, tau, cutoff
+    integer, intent(in) :: step_type
+    real(dl) :: SmoothedTopFunctionDer
+    real(dl) :: arg, argp1
+    real(dl) :: exparg, expargp1
+
+        arg = log(a/ai)/tau
+        argp1 = log(a/aip1)/tau
+
+        if(arg < -cutoff .and. argp1 < -cutoff) then
+            SmoothedTopFunctionDer = 0
+        else if(arg > cutoff .and. argp1 > cutoff) then
+            SmoothedTopFunctionDer = 0
+        else
+            !We are in the step region
+            if(step_type == 1) then
+                exparg = exp(arg)
+                expargp1 = exp(argp1)
+                SmoothedTopFunctionDer = -expargp1/(1. + expargp1)**2/tau + &
+                    exparg/(1. + exparg)**2/tau
+            else if(step_type == 2) then
+                SmoothedTopFunctionDer = (exp(-arg**2/2.) - exp(-argp1**2/2.))/sqrt(const_twopi)/tau
+            else
+                stop 'step'
+            endif
+        endif
+
+    end function
+
+    !Second derivative of step function (choice from two) wrt ln a
+    function SmoothedTopFunctionDerDer(a, ai, aip1, tau, step_type, cutoff)
+    real(dl), intent(in) :: a, ai, aip1, tau, cutoff
+    integer, intent(in) :: step_type
+    real(dl) :: SmoothedTopFunctionDerDer
+    real(dl) :: arg, argp1
+    real(dl) :: exparg, expargp1
+
+        arg = log(a/ai)/tau
+        argp1 = log(a/aip1)/tau
+
+        if(arg < -cutoff .and. argp1 < -cutoff) then
+            SmoothedTopFunctionDerDer = 0
+        else if(arg > cutoff .and. argp1 > cutoff) then
+            SmoothedTopFunctionDerDer = 0
+        else
+            !We are in the step region
+            if(step_type == 1) then
+                exparg = exp(arg)
+                expargp1 = exp(argp1)
+                SmoothedTopFunctionDerDer = 2*expargp1**2/(1. + expargp1)**3/tau**2&
+                    - expargp1/(1. + expargp1)**2/tau**2 &
+                    -2*exparg**2/(1. + exparg)**3/tau**2 &
+                    + exparg/(1. + exparg)**2/tau**2
+            else if(step_type == 2) then
+                SmoothedTopFunctionDerDer = (-arg*exp(-arg**2/2.) + argp1*exp(-argp1**2/2.))/sqrt(const_twopi)/tau**2
+            else
+                stop 'step'
+            endif
+        endif
+    end function
+
+    !Step function
+    function SmoothedStepFunction(a, ai, aip1, tau, cutoff)
+    real(dl), intent(in) :: a, ai, aip1, tau, cutoff
     real(dl) :: SmoothedStepFunction
     real(dl) :: arg, argp1
     real(dl) :: exparg, expargp1
@@ -116,23 +207,15 @@
         else if(arg > cutoff .and. argp1 > cutoff) then
             SmoothedStepFunction = 0
         else
-            !We are in the step region
-            !if(step_type == 1) then
-                exparg = exp(arg)
-                expargp1 = exp(argp1)
-                SmoothedStepFunction = (exparg - expargp1)/(1. + expargp1)/(1. + exparg)
-            !else if(step_type == 2) then
-            !    SmoothedStepFunction = (erf(arg/sqrt(2.)) - erf(argp1/sqrt(2.)))/2.
-            !else
-            !   stop 'step'
-            !endif
+            exparg = exp(arg)
+            expargp1 = exp(argp1)
+            SmoothedStepFunction = (exparg - expargp1)/(1. + expargp1)/(1. + exparg)
         endif
     end function
 
-    !Derivative of step function (choice from two) wrt ln a
-    function SmoothedStepFunctionDer(a, ai, aip1, tau, step_type, cutoff)
+    !Derivative of step function wrt ln a
+    function SmoothedStepFunctionDer(a, ai, aip1, tau, cutoff)
     real(dl), intent(in) :: a, ai, aip1, tau, cutoff
-    integer, intent(in) :: step_type
     real(dl) :: SmoothedStepFunctionDer
     real(dl) :: arg, argp1
     real(dl) :: exparg, expargp1
@@ -145,25 +228,17 @@
         else if(arg > cutoff .and. argp1 > cutoff) then
             SmoothedStepFunctionDer = 0
         else
-            !We are in the step region
-            !if(step_type == 1) then
-                exparg = exp(arg)
-                expargp1 = exp(argp1)
-                SmoothedStepFunctionDer = -expargp1/(1. + expargp1)**2/tau + &
-                    exparg/(1. + exparg)**2/tau
-            !else if(step_type == 2) then
-            !    SmoothedStepFunctionDer = (exp(-arg**2/2.) - exp(-argp1**2/2.))/sqrt(const_twopi)/tau
-            !else
-            !    stop 'step'
-            !endif
+            exparg = exp(arg)
+            expargp1 = exp(argp1)
+            SmoothedStepFunctionDer = -expargp1/(1. + expargp1)**2/tau + &
+                exparg/(1. + exparg)**2/tau
         endif
 
     end function
 
-    !Second derivative of step function (choice from two) wrt ln a
-    function SmoothedStepFunctionDerDer(a, ai, aip1, tau, step_type, cutoff)
+    !Second derivative of step function wrt ln a
+    function SmoothedStepFunctionDerDer(a, ai, aip1, tau, cutoff)
     real(dl), intent(in) :: a, ai, aip1, tau, cutoff
-    integer, intent(in) :: step_type
     real(dl) :: SmoothedStepFunctionDerDer
     real(dl) :: arg, argp1
     real(dl) :: exparg, expargp1
@@ -176,19 +251,12 @@
         else if(arg > cutoff .and. argp1 > cutoff) then
             SmoothedStepFunctionDerDer = 0
         else
-            !We are in the step region
-            !if(step_type == 1) then
-                exparg = exp(arg)
-                expargp1 = exp(argp1)
-                SmoothedStepFunctionDerDer = 2*expargp1**2/(1. + expargp1)**3/tau**2&
-                    - expargp1/(1. + expargp1)**2/tau**2 &
-                    -2*exparg**2/(1. + exparg)**3/tau**2 &
-                    + exparg/(1. + exparg)**2/tau**2
-            !else if(step_type == 2) then
-            !    SmoothedStepFunctionDerDer = (-arg*exp(-arg**2/2.) + argp1*exp(-argp1**2/2.))/sqrt(const_twopi)/tau**2
-            !else
-            !    stop 'step'
-            !endif
+            exparg = exp(arg)
+            expargp1 = exp(argp1)
+            SmoothedStepFunctionDerDer = 2*expargp1**2/(1. + expargp1)**3/tau**2&
+                - expargp1/(1. + expargp1)**2/tau**2 &
+                -2*exparg**2/(1. + exparg)**3/tau**2 &
+                + exparg/(1. + exparg)**2/tau**2
         endif
     end function
 
@@ -216,7 +284,7 @@
 
             delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, &
                                 this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
-                                this%de_step_type, this%de_overflow_cutoff)
+                                this%de_overflow_cutoff)
         enddo
 
         grhov_t_beyond = delta*grho_t
@@ -270,7 +338,7 @@
 
         ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, &
                         this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
-                        this%de_step_type, this%de_overflow_cutoff)
+                        this%de_overflow_cutoff)
     enddo
 
     !Eq 3 from 1304.3724
@@ -311,15 +379,15 @@
 
         delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, &
             this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
-            this%de_step_type, this%de_overflow_cutoff)
+            this%de_overflow_cutoff)
 
         ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, &
             this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
-            this%de_step_type, this%de_overflow_cutoff)
+            this%de_overflow_cutoff)
 
         d2delta_d2lna = d2delta_d2lna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDerDer(a, &
             this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
-            this%de_step_type, this%de_overflow_cutoff)
+            this%de_overflow_cutoff)
 
     enddo
 

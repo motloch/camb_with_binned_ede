@@ -834,7 +834,10 @@
         !allocate even if no transfer to prevent debugging access errors
         allocate(State%Transfer_Times(0:State%num_transfer_redshifts+1))
         if (CP%WantTransfer) &
-            call State%TimeOfzArr(State%Transfer_times(1:),  State%Transfer_redshifts, State%num_transfer_redshifts)
+            !<pavel>
+            call State%TimeOfzArr(State%Transfer_times(1:),  State%Transfer_redshifts, &
+                State%num_transfer_redshifts, 1d-8)
+            !</pavel>
     endif
 
     end subroutine InitVars
