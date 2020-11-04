@@ -290,7 +290,6 @@
     real(dl) delta, ddelta_dlna, d2delta_d2lna
     real(dl) :: dQ_dlna, dw_bg_dlna
     real(dl) :: denom, t1, t2, t3, t4
-    real(dl) :: w0
     real(dl) :: w_ratio
     integer :: i
 
@@ -323,8 +322,6 @@
             this%de_step_type, this%de_overflow_cutoff)
 
     enddo
-
-    w0 = this%w_de(a, delta, Q, w_bg)
 
     Hv3_over_k =  3*adotoa* y(w_ix + 1) / k
     ! dw/dlog a/(1+w) - derivative of Eq 3 from 1304.3724
