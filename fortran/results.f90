@@ -532,7 +532,6 @@
             !To avoid ``mismatch in integrated times''
             this%tau0=this%TimeOfz(0._dl, 1d-8)
             !</pavel>
-            write(*,*) this%tau0
             this%chi0=this%rofChi(this%tau0/this%curvature_radius)
             this%scale= this%chi0*this%curvature_radius/this%tau0  !e.g. change l sampling depending on approx peak spacing
             if (this%closed .and. this%tau0/this%curvature_radius >3.14) then
