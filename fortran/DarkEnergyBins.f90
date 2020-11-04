@@ -117,15 +117,15 @@
             SmoothedStepFunction = 0
         else
             !We are in the step region
-            if(step_type == 1) then
+            !if(step_type == 1) then
                 exparg = exp(arg)
                 expargp1 = exp(argp1)
                 SmoothedStepFunction = (exparg - expargp1)/(1. + expargp1)/(1. + exparg)
-            else if(step_type == 2) then
-                SmoothedStepFunction = (erf(arg/sqrt(2.)) - erf(argp1/sqrt(2.)))/2.
-            else
-               stop 'step'
-            endif
+            !else if(step_type == 2) then
+            !    SmoothedStepFunction = (erf(arg/sqrt(2.)) - erf(argp1/sqrt(2.)))/2.
+            !else
+            !   stop 'step'
+            !endif
         endif
     end function
 
@@ -146,16 +146,16 @@
             SmoothedStepFunctionDer = 0
         else
             !We are in the step region
-            if(step_type == 1) then
+            !if(step_type == 1) then
                 exparg = exp(arg)
                 expargp1 = exp(argp1)
                 SmoothedStepFunctionDer = -expargp1/(1. + expargp1)**2/tau + &
                     exparg/(1. + exparg)**2/tau
-            else if(step_type == 2) then
-                SmoothedStepFunctionDer = (exp(-arg**2/2.) - exp(-argp1**2/2.))/sqrt(const_twopi)/tau
-            else
-                stop 'step'
-            endif
+            !else if(step_type == 2) then
+            !    SmoothedStepFunctionDer = (exp(-arg**2/2.) - exp(-argp1**2/2.))/sqrt(const_twopi)/tau
+            !else
+            !    stop 'step'
+            !endif
         endif
 
     end function
@@ -177,18 +177,18 @@
             SmoothedStepFunctionDerDer = 0
         else
             !We are in the step region
-            if(step_type == 1) then
+            !if(step_type == 1) then
                 exparg = exp(arg)
                 expargp1 = exp(argp1)
                 SmoothedStepFunctionDerDer = 2*expargp1**2/(1. + expargp1)**3/tau**2&
                     - expargp1/(1. + expargp1)**2/tau**2 &
                     -2*exparg**2/(1. + exparg)**3/tau**2 &
                     + exparg/(1. + exparg)**2/tau**2
-            else if(step_type == 2) then
-                SmoothedStepFunctionDerDer = (-arg*exp(-arg**2/2.) + argp1*exp(-argp1**2/2.))/sqrt(const_twopi)/tau**2
-            else
-                stop 'step'
-            endif
+            !else if(step_type == 2) then
+            !    SmoothedStepFunctionDerDer = (-arg*exp(-arg**2/2.) + argp1*exp(-argp1**2/2.))/sqrt(const_twopi)/tau**2
+            !else
+            !    stop 'step'
+            !endif
         endif
     end function
 
