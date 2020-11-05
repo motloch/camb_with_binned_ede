@@ -36,6 +36,7 @@
     call this%TDarkEnergyModel%ReadParams(Ini)
     !Read the number of DE bins and allocate the arrays
     this%de_n_bins  = Ini%Read_Double('DE_n_bins')
+    this%de_n_fluids  = Ini%Read_Double('DE_n_fluids')
     this%de_step_type = Ini%Read_Int('DE_step_type', 1)
     this%de_use_perturbations = Ini%Read_Int('DE_use_perturbations', 1)
     this%de_overflow_cutoff = Ini%Read_Double('DE_OVERFLOW_CUTOFF', 7.d2)
@@ -192,17 +193,18 @@
         endif
     end function
 
-    subroutine TDarkEnergyBins_BackgroundDensityAndPressure(this, grhov, a, grhov_t, grhoa2_noDE, w, w_bg)
+    subroutine TDarkEnergyBins_BackgroundDensityAndPressure(this, grhov, a, grhov_t, grhov_ede_t, &
+        grhoa2_noDE, w, w_ede, w_bg)
     !Get grhov_t = 8*pi*rho_de*a**2 and (optionally) equation of state at scale factor a
     class(TDarkEnergyBins), intent(inout) :: this
     real(dl), intent(in) :: grhov, a
     real(dl), intent(in) :: grhoa2_noDE
-    real(dl), intent(out) :: grhov_t
-    real(dl), optional, intent(out) :: w
+    real(dl), intent(out) :: grhov_t, grhov_ede_t
+    real(dl), optional, intent(out) :: w, w_ede
     real(dl), optional, intent(in) :: w_bg
-    real(dl) :: grhov_t_lcdm, grho_t, grhov_t_beyond
+    real(dl) :: grhov_t_lcdm, grho_t
     real(dl) :: arg1, arg2
-    real(dl) :: delta, Q
+    real(dl) :: delta, ddelta_dlna, Q
     integer :: i
 
     grhov_t_lcdm = grhov * a * a
@@ -217,28 +219,42 @@
             delta = delta + this%de_bin_amplitudes(i)*SmoothedStepFunction(a, &
                                 this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
                                 this%de_step_type, this%de_overflow_cutoff)
+
         enddo
 
-        grhov_t_beyond = delta*grho_t
-        grhov_t = grhov_t_lcdm + grhov_t_beyond
+        grhov_ede_t = delta*grho_t
+        grhov_t = grhov_t_lcdm + grhov_ede_t
 
         !Factor that goes into the DE equation of state
-        Q = grhoa2_noDE/a/a/grhov_t_lcdm
         if (present(w)) then
-            if (.not. present(w_bg)) then
+            if ((.not. present(w_bg)) .or. (.not. present(w_ede))) then
                 stop 'w_bg'
             else
-                w = this%w_de(a, delta, Q, w_bg)
+                Q = grhoa2_noDE/a/a/grhov_t_lcdm
+
+                ddelta_dlna = 0
+                !Get contributions from each of the dark energy bins
+                do i = 1, this%de_n_bins
+
+                    ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, &
+                                    this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
+                                    this%de_step_type, this%de_overflow_cutoff)
+
+                enddo
+
+                w = this%w_de(a, delta, ddelta_dlna, Q, w_bg)
+                w_ede = TDarkEnergyBins_w_ede(a, delta, ddelta_dlna, Q, w_bg)
             endif
         endif
 
     !At a = 0, just use LCDM
     else
         grho_t = grhov_t_lcdm
-        grhov_t_beyond = 0
+        grhov_ede_t = 0
         grhov_t = grhov_t_lcdm
         if (present(w)) then
             w = -1
+            w_ede = 0
         endif
     endif
 
@@ -255,29 +271,33 @@
 
     end function TDarkEnergyBins_grho_de
 
-    function TDarkEnergyBins_w_de(this, a, delta, Q, w_bg)
+    !w of the total DE fluid (EDE and Lambda)
+    function TDarkEnergyBins_w_de(this, a, delta, ddelta_dlna, Q, w_bg)
     class(TDarkEnergyBins) :: this
     real(dl) :: TDarkEnergyBins_w_de
     real(dl), intent(IN) :: a
     real(dl), intent(in) :: delta, Q, w_bg
-    real(dl) :: ddelta_dlna
+    real(dl), intent(in) :: ddelta_dlna
     integer :: i
-
-    ddelta_dlna = 0
-
-    !Get contributions from each of the dark energy bins
-    do i = 1, this%de_n_bins
-
-        ddelta_dlna = ddelta_dlna + this%de_bin_amplitudes(i)*SmoothedStepFunctionDer(a, &
-                        this%de_bin_ai(i), this%de_bin_ai(i+1), this%de_tau, &
-                        this%de_step_type, this%de_overflow_cutoff)
-    enddo
 
     !Eq 3 from 1304.3724
     TDarkEnergyBins_w_de = -1 + Q*delta/(1+delta+delta*Q)*(1+w_bg)&
         -(1+Q)/3./(1+delta+delta*Q)*ddelta_dlna
 
     end function TDarkEnergyBins_w_de
+
+    !w of only the EDE component
+    function TDarkEnergyBins_w_ede(a, delta, ddelta_dlna, Q, w_bg)
+    real(dl) :: TDarkEnergyBins_w_ede
+    real(dl), intent(IN) :: a
+    real(dl), intent(in) :: delta, Q, w_bg
+    real(dl), intent(in) :: ddelta_dlna
+    integer :: i
+
+    !Similar to Eq 3 from 1304.3724, but only for the EDE component
+    TDarkEnergyBins_w_ede = -1 + Q/(1+Q)*(1+w_bg) -ddelta_dlna/3.
+
+    end function TDarkEnergyBins_w_ede
 
     subroutine TDarkEnergyBins_PerturbationEvolve(this, ayprime, w, w_ix, &
         a, adotoa, k, z, y, Q, Q_dot, w_bg, w_bg_dot)
@@ -333,13 +353,22 @@
     else if(1+w .eq. 0) then
         deriv = 0
     else
-        denom = 1 + delta + delta*Q
-        t1 = -(1+Q)/3.*d2delta_d2lna/denom
-        t2 = delta*Q*dw_bg_dlna/denom
-        t3 = ddelta_dlna/3./denom**2*(ddelta_dlna*(1+Q)**2 + 3*Q*(1+w_bg))
-        t4 = -dQ_dlna/3./denom**2*(ddelta_dlna - 3*delta*(1+delta)*(1+w_bg))
+        if(this%de_n_fluids == 2) then
+            denom = 1 + Q
+            t1 = -d2delta_d2lna/3.
+            t2 = Q*dw_bg_dlna/denom
+            t4 = dQ_dlna/denom**2*(1+w_bg)
 
-        deriv  = (t1 + t2 + t3 + t4)/(1+w)
+            deriv  = (t1 + t2 + t4)/(1+w)
+        else
+            denom = 1 + delta + delta*Q
+            t1 = -(1+Q)/3.*d2delta_d2lna/denom
+            t2 = delta*Q*dw_bg_dlna/denom
+            t3 = ddelta_dlna/3./denom**2*(ddelta_dlna*(1+Q)**2 + 3*Q*(1+w_bg))
+            t4 = -dQ_dlna/3./denom**2*(ddelta_dlna - 3*delta*(1+delta)*(1+w_bg))
+
+            deriv  = (t1 + t2 + t3 + t4)/(1+w)
+        endif
     endif
 
     !TEST 6

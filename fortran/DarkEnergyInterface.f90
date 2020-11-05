@@ -12,6 +12,8 @@
         !<pavel>
         integer :: de_n_bins !Number of DE bins - the background rho is
                              !multiplied by (1+delta_i) inside a redshift bin
+        integer :: de_n_fluids !Whether EDE and LCDM are a single fluid or not
+                               !(so whether Lambda has perturbations)
         integer :: de_step_type !Whether we have steps smoothed into 1/(1+exp) or smoothed tophat
         integer :: de_use_perturbations !Whether DE has evolving perturbations
         real(dl) :: de_overflow_cutoff !Where to cut the exp when evaluating the
@@ -56,12 +58,12 @@
     contains
 
     !<pavel>
-    function w_de(this, a, delta, Q, w_bg)
+    function w_de(this, a, delta, ddelta_dlna, Q, w_bg)
     !</pavel>
     class(TDarkEnergyModel) :: this
     real(dl) :: w_de, al
     !<pavel>
-    real(dl), intent(in) :: delta, Q, w_bg
+    real(dl), intent(in) :: delta, ddelta_dlna, Q, w_bg
     !</pavel>
     real(dl), intent(IN) :: a
 
@@ -93,7 +95,8 @@
     end subroutine Init
 
     !<pavel>
-    subroutine BackgroundDensityAndPressure(this, grhov, a, grhov_t, grhoa2_noDE, w, w_bg)
+    subroutine BackgroundDensityAndPressure(this, grhov, a, grhov_t, grhov_ede_t, &
+        grhoa2_noDE, w, w_ede, w_bg)
     !</pavel>
     !Get grhov_t = 8*pi*rho_de*a**2 and (optionally) equation of state at scale factor a
     class(TDarkEnergyModel), intent(inout) :: this
@@ -103,7 +106,9 @@
     !<pavel>
     real(dl), intent(in) :: grhoa2_noDE
     real(dl), optional, intent(in) :: w_bg
-    real(dl) :: delta, Q
+    real(dl) :: delta, ddelta_dlna, Q
+    real(dl), intent(out) :: grhov_ede_t
+    real(dl), optional, intent(out) :: w_ede
     !</pavel>
 
     if (this%is_cosmological_constant) then
@@ -117,7 +122,7 @@
             grhov_t = 0._dl
         end if
         !<pavel>
-        if (present(w)) w = this%w_de(a, delta, Q, w_bg)
+        if (present(w)) w = this%w_de(a, delta, ddelta_dlna, Q, w_bg)
         !</pavel>
     end if
 
@@ -200,13 +205,13 @@
     end subroutine TDarkEnergyEqnOfState_SetwTable
 
     !<pavel>
-    function TDarkEnergyEqnOfState_w_de(this, a, delta, Q, w_bg)
+    function TDarkEnergyEqnOfState_w_de(this, a, delta, ddelta_dlna, Q, w_bg)
     !</pavel>
     class(TDarkEnergyEqnOfState) :: this
     real(dl) :: TDarkEnergyEqnOfState_w_de, al
     real(dl), intent(IN) :: a
     !<pavel>
-    real(dl), intent(in) :: delta, Q, w_bg
+    real(dl), intent(in) :: delta, ddelta_dlna, Q, w_bg
     !</pavel>
 
     if(.not. this%use_tabulated_w) then

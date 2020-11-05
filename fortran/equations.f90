@@ -18,7 +18,7 @@
     implicit none
     class(CAMBdata) :: this
     real(dl), intent(in) :: a
-    real(dl) :: dtauda, rhonu, grhoa2, a2, grhov_t
+    real(dl) :: dtauda, rhonu, grhoa2, a2, grhov_t, grhov_ede_t
     !<pavel>
     !Now our DE is a function of the density of the other species, so we have to
     !calculate it first
@@ -41,7 +41,7 @@
     end if
 
     call this%CP%DarkEnergy%BackgroundDensityAndPressure(this%grhov, a, &
-        grhov_t, grhoa2_noDE)
+        grhov_t, grhov_ede_t, grhoa2_noDE)
 
     grhoa2 = grhoa2_noDE + grhov_t * a2
     !</pavel>
@@ -2231,6 +2231,9 @@
 
     real(dl) dgq,grhob_t,grhor_t,grhoc_t,grhog_t,grhov_t,grhonu_t,sigma,polter
     real(dl) w_dark_energy_t !equation of state of dark energy
+    !<pavel>
+    real(dl) grhov_ede_t, w_ede_t
+    !</pavel>
     real(dl) gpres_noDE !Pressure with matter and radiation, no dark energy
     real(dl) qgdot,qrdot,pigdot,pirdot,vbdot,dgrho,adotoa
     real(dl) a,a2,z,clxc,clxb,vb,clxg,qg,pig,clxr,qr,pir
@@ -2314,9 +2317,9 @@
         if(.not. State%flat) then
             stop 'omk'
         endif
-        call State%CP%DarkEnergy%BackgroundDensityAndPressure(State%grhov, a, grhov_t, &
+        call State%CP%DarkEnergy%BackgroundDensityAndPressure(State%grhov, a, grhov_t, grhov_ede_t,&
             a2*(State%grhok + grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t), &
-            w_dark_energy_t, de_w_bg)
+            w_dark_energy_t, w_ede_t, de_w_bg)
     end if
     !</pavel>
 
@@ -2390,9 +2393,19 @@
     pb43=4._dl/3*photbar
 
     if (.not. EV%is_cosmological_constant) then
-        call State%CP%DarkEnergy%PerturbedStressEnergy(dgrho_de, dgq_de, &
-            dgq, dgrho, grho, grhov_t, w_dark_energy_t, gpres_noDE, etak, &
-            adotoa, k, EV%Kf(1), ay, ayprime, EV%w_ix)
+        !<pavel>
+        !Which DE density to use depends on whether we consider perturbations in the
+        !total DE fluid or only in EDE
+        if(State%CP%DarkEnergy%de_n_fluids == 2) then
+            call State%CP%DarkEnergy%PerturbedStressEnergy(dgrho_de, dgq_de, &
+                dgq, dgrho, grho, grhov_ede_t, w_dark_energy_t, gpres_noDE, etak, &
+                adotoa, k, EV%Kf(1), ay, ayprime, EV%w_ix)
+        else
+            call State%CP%DarkEnergy%PerturbedStressEnergy(dgrho_de, dgq_de, &
+                dgq, dgrho, grho, grhov_t, w_dark_energy_t, gpres_noDE, etak, &
+                adotoa, k, EV%Kf(1), ay, ayprime, EV%w_ix)
+        endif
+        !</pavel>
         dgrho = dgrho + dgrho_de
         dgq = dgq + dgq_de
     end if
@@ -2447,8 +2460,15 @@
         !endif
         !</pavel>
 
-        call State%CP%DarkEnergy%PerturbationEvolve(ayprime, w_dark_energy_t, &
-        EV%w_ix, a, adotoa, k, z, ay, de_Q, de_Q_dot, de_w_bg, de_w_bg_dot)
+        !Which w to use depends on whether we consider perturbations in the
+        !total DE fluid or only in EDE
+        if(State%CP%DarkEnergy%de_n_fluids == 2) then
+            call State%CP%DarkEnergy%PerturbationEvolve(ayprime, w_ede_t, &
+            EV%w_ix, a, adotoa, k, z, ay, de_Q, de_Q_dot, de_w_bg, de_w_bg_dot)
+        else
+            call State%CP%DarkEnergy%PerturbationEvolve(ayprime, w_dark_energy_t, &
+            EV%w_ix, a, adotoa, k, z, ay, de_Q, de_Q_dot, de_w_bg, de_w_bg_dot)
+        endif
     endif
     !</pavel>
 

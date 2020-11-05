@@ -215,13 +215,13 @@
 
 
     !<pavel>
-    function TAxionEffectiveFluid_w_de(this, a, delta, Q, w_bg)
+    function TAxionEffectiveFluid_w_de(this, a, delta, ddelta_dlna, Q, w_bg)
     !</pavel>
     class(TAxionEffectiveFluid) :: this
     real(dl) :: TAxionEffectiveFluid_w_de
     real(dl), intent(IN) :: a
     !<pavel>
-    real(dl), intent(in) :: delta, Q, w_bg
+    real(dl), intent(in) :: delta, ddelta_dlna, Q, w_bg
     !</pavel>
     real(dl) :: rho, apow, acpow
 
