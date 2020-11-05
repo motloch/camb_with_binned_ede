@@ -36,7 +36,7 @@
     call this%TDarkEnergyModel%ReadParams(Ini)
     !Read the number of DE bins and allocate the arrays
     this%de_n_bins  = Ini%Read_Double('DE_n_bins')
-    this%de_n_fluids  = Ini%Read_Double('DE_n_fluids', 1)
+    this%de_n_fluids  = Ini%Read_Int('DE_n_fluids', 1)
     this%de_step_type = Ini%Read_Int('DE_step_type', 1)
     this%de_use_perturbations = Ini%Read_Int('DE_use_perturbations', 1)
     this%de_overflow_cutoff = Ini%Read_Double('DE_OVERFLOW_CUTOFF', 7.d2)
@@ -295,7 +295,7 @@
     integer :: i
 
     !Similar to Eq 3 from 1304.3724, but only for the EDE component
-    TDarkEnergyBins_w_ede = -1 + Q/(1+Q)*(1+w_bg) -ddelta_dlna/3.
+    TDarkEnergyBins_w_ede = -1 + Q/(1+Q)*(1+w_bg) -ddelta_dlna/3./delta
 
     end function TDarkEnergyBins_w_ede
 
@@ -355,11 +355,12 @@
     else
         if(this%de_n_fluids == 2) then
             denom = 1 + Q
-            t1 = -d2delta_d2lna/3.
+            t1 = -d2delta_d2lna/3./delta
             t2 = Q*dw_bg_dlna/denom
+            t3 = ddelta_dlna**2/3./delta**2
             t4 = dQ_dlna/denom**2*(1+w_bg)
 
-            deriv  = (t1 + t2 + t4)/(1+w)
+            deriv  = (t1 + t2 + t3 + t4)/(1+w)
         else
             denom = 1 + delta + delta*Q
             t1 = -(1+Q)/3.*d2delta_d2lna/denom
@@ -373,7 +374,7 @@
 
     !TEST 6
     !if(abs(k - 0.524) < 0.002) then
-    !    write(*,'(48e19.6)') a, deriv
+    !    write(*,'(48e19.6e3)') a, deriv
     !endif
     !</pavel>
 

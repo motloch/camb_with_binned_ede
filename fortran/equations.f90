@@ -48,7 +48,7 @@
 
     !<pavel>
     !TEST 1
-    !write(*,'(48e19.6)') a, grhoa2
+    !write(*,'(48e19.6e3)') a, grhoa2, grhov_ede_t * a2
     !</pavel>
 
     dtauda = sqrt(3 / grhoa2)
@@ -2326,12 +2326,12 @@
     !<pavel>
     !TEST 2, 3
     !if(abs(k - 0.524) < 0.002) then
-    !    write(*,'(48e19.6)') a, k, grhoc_t, grhob_t, grhog_t, grhor_t, grhonu_t, grhov_t, w_dark_energy_t
+    !    write(*,'(48e19.6e3)') a, k, grhoc_t, grhob_t, grhog_t, grhor_t, grhonu_t, grhov_t, w_dark_energy_t, grhov_ede_t, w_ede_t
     !endif
 
     !TEST COSMOMC
     !if(abs(k - 0.524) < 0.02) then
-    !    write(*,'(48e19.6)') a, k, grhoc_t,grhob_t,grhog_t,grhor_t,grhonu_t,grhov_t
+    !    write(*,'(48e19.6e3)') a, k, grhoc_t,grhob_t,grhog_t,grhor_t,grhonu_t,grhov_t
     !endif
     !</pavel>
 
@@ -2437,7 +2437,7 @@
         !<pavel>
         !TEST 4
         !if(abs(k - 0.524) < 0.002) then
-        !    write(*,'(48e19.6)') a, tau, k, nu_grho, nu_gpres, nu_grho_dot, nu_gpres_dot
+        !    write(*,'(48e19.6e3)') a, tau, k, nu_grho, nu_gpres, nu_grho_dot, nu_gpres_dot
         !endif
         !</pavel>
 
@@ -2455,7 +2455,7 @@
         !<pavel>
         !TEST 5
         !if(abs(k - 0.524) < 0.002) then
-        !    write(*,'(48e19.6)') a, tau, k, grhom_t, grhom_t_dot, gpres_noDE_dot, &
+        !    write(*,'(48e19.6e3)') a, tau, k, grhom_t, grhom_t_dot, gpres_noDE_dot, &
         !        de_Q, de_w_bg, de_Q_dot, de_w_bg_dot
         !endif
         !</pavel>
