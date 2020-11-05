@@ -36,7 +36,7 @@
     call this%TDarkEnergyModel%ReadParams(Ini)
     !Read the number of DE bins and allocate the arrays
     this%de_n_bins  = Ini%Read_Double('DE_n_bins')
-    this%de_n_fluids  = Ini%Read_Double('DE_n_fluids')
+    this%de_n_fluids  = Ini%Read_Double('DE_n_fluids', 1)
     this%de_step_type = Ini%Read_Int('DE_step_type', 1)
     this%de_use_perturbations = Ini%Read_Int('DE_use_perturbations', 1)
     this%de_overflow_cutoff = Ini%Read_Double('DE_OVERFLOW_CUTOFF', 7.d2)
