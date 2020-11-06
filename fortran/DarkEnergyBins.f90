@@ -99,6 +99,11 @@
     dgrhoe = ay(w_ix) * grhov_t
     dgqe = ay(w_ix + 1) * grhov_t
 
+    !TEST 7
+    !if(abs(k - 0.524) < 0.002) then
+    !    write(*,'(48e19.6e3)') grho, grhov_t
+    !endif
+
     end subroutine TDarkEnergyBins_PerturbedStressEnergy
 
     !Step function (choice from two)
@@ -374,7 +379,7 @@
 
     !TEST 6
     !if(abs(k - 0.524) < 0.002) then
-    !    write(*,'(48e19.6e3)') a, deriv
+    !    write(*,'(48e19.6e3)') a, deriv, w
     !endif
     !</pavel>
 
