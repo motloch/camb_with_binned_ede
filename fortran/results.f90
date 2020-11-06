@@ -608,7 +608,7 @@
         write(*,'("Om_darkenergy        = ",f9.6)') this%Omega_de
         write(*,'("Om_K                 = ",f9.6)') P%omk
         write(*,'("Om_m (inc Om_u)      = ",f9.6)') (P%ombh2+P%omch2+P%omnuh2)/h2
-        write(*,'("100 theta (CosmoMC)  = ",f9.6)') 100*this%CosmomcTheta()
+        write(*,'("100 theta (CosmoMC)  = ",f12.9)') 100*this%CosmomcTheta()
         if (this%CP%Num_Nu_Massive > 0) then
             write(*,'("N_eff (total)        = ",f9.6)') nu_massless_degeneracy + &
                 sum(this%CP%Nu_mass_degeneracies(1:this%CP%Nu_mass_eigenstates))

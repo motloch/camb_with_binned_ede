@@ -2261,6 +2261,20 @@
     real(dl) grhom_t, grhom_t_dot, gpres_noDE_dot
     real(dl) dgq_nu
 
+    !<pavel>
+    !TEST TRANSFER
+    !write(*,*) 'nbins', State%CP%DarkEnergy%de_n_bins
+    !write(*,*) 'nfluids', State%CP%DarkEnergy%de_n_fluids
+    !write(*,*) 'steptype', State%CP%DarkEnergy%de_step_type
+    !write(*,*) 'usepert', State%CP%DarkEnergy%de_use_perturbations
+    !write(*,*) 'cutoff', State%CP%DarkEnergy%de_overflow_cutoff
+    !write(*,*) 'tau', State%CP%DarkEnergy%de_tau
+    !write(*,*) 'binai', State%CP%DarkEnergy%de_bin_ai
+    !write(*,*) 'cs2', State%CP%DarkEnergy%de_cs2
+    !write(*,*) 'ampl', State%CP%DarkEnergy%de_bin_amplitudes
+    !stop
+    !</pavel>
+
     ayprime = 0
     !</pavel>
 
