@@ -300,7 +300,12 @@
     integer :: i
 
     !Similar to Eq 3 from 1304.3724, but only for the EDE component
-    TDarkEnergyBins_w_ede = -1 + Q/(1+Q)*(1+w_bg) -ddelta_dlna/3./delta
+    if(delta .ne. 0) then
+        TDarkEnergyBins_w_ede = -1 + Q/(1+Q)*(1+w_bg) -ddelta_dlna/3./delta
+    else
+        !In case we have LCDM exactly
+        TDarkEnergyBins_w_ede = -1 + Q/(1+Q)*(1+w_bg)
+    endif
 
     end function TDarkEnergyBins_w_ede
 
@@ -364,6 +369,11 @@
             t2 = Q*dw_bg_dlna/denom
             t3 = ddelta_dlna**2/3./delta**2
             t4 = dQ_dlna/denom**2*(1+w_bg)
+            !In case we have LCDM exactly
+            if(delta == 0) then
+                t1 = 0
+                t3 = 0
+            endif
 
             deriv  = (t1 + t2 + t3 + t4)/(1+w)
         else
