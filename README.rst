@@ -1,3 +1,11 @@
+Forked CAMB (see below) and added early dark energy as a single scalar field. 
+
+The necessary conventions and equations were taken from Hojjati+: "New Constraints on the Early Expansion History" (https://arxiv.org/pdf/1304.3724.pdf) and references therein.
+
+For an example ini file, see "example_ini.ini" in the main folder.
+
+
+
 ===================
 CAMB
 ===================
