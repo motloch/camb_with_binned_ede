@@ -18,23 +18,38 @@
     implicit none
     class(CAMBdata) :: this
     real(dl), intent(in) :: a
-    real(dl) :: dtauda, rhonu, grhoa2, a2, grhov_t
+    real(dl) :: dtauda, rhonu, grhoa2, a2, grhov_t, grhov_ede_t
+    !<pavel>
+    !Now our DE is a function of the density of the other species, so we have to
+    !calculate it first
+    real(dl) :: grhoa2_noDE
+    !</pavel>
     integer :: nu_i
 
     a2 = a ** 2
-    call this%CP%DarkEnergy%BackgroundDensityAndPressure(this%grhov, a, grhov_t)
 
+    !<pavel>
     !  8*pi*G*rho*a**4.
-    grhoa2 = this%grhok * a2 + (this%grhoc + this%grhob) * a + this%grhog + this%grhornomass + &
-        grhov_t * a2
+    grhoa2_noDE = this%grhok * a2 + (this%grhoc + this%grhob) * a + this%grhog + this%grhornomass
 
     if (this%CP%Num_Nu_massive /= 0) then
         !Get massive neutrino density relative to massless
         do nu_i = 1, this%CP%nu_mass_eigenstates
             call ThermalNuBack%rho(a * this%nu_masses(nu_i), rhonu)
-            grhoa2 = grhoa2 + rhonu * this%grhormass(nu_i)
+            grhoa2_noDE = grhoa2_noDE + rhonu * this%grhormass(nu_i)
         end do
     end if
+
+    call this%CP%DarkEnergy%BackgroundDensityAndPressure(this%grhov, a, &
+        grhov_t, grhov_ede_t, grhoa2_noDE)
+
+    grhoa2 = grhoa2_noDE + grhov_t * a2
+    !</pavel>
+
+    !<pavel>
+    !TEST 1
+    !write(*,'(48e19.6e3)') a, grhoa2, grhov_ede_t * a2
+    !</pavel>
 
     dtauda = sqrt(3 / grhoa2)
 
@@ -896,6 +911,14 @@
             end if
         end if
 
+        !<pavel>
+        !make sure we have at least as many massless neutrino multipoles as we
+        !have massive
+        if (EV%lmaxnr < EV%lmaxnu) then
+            EV%lmaxnr = EV%lmaxnu
+        endif
+        !</pavel>
+
         if (EV%TransferOnly) then
             EV%lmaxgpol = min(EV%lmaxgpol,nint(5*CP%Accuracy%lAccuracyBoost))
             EV%lmaxg = min(EV%lmaxg,nint(6*CP%Accuracy%lAccuracyBoost))
@@ -1234,6 +1257,49 @@
     end do
 
     end subroutine Nu_Intvsq
+
+    !<pavel>
+    !Derivatives of the neutrino density and pressure, necessary to calculate
+    !derivatives of background density and pressure that enter the DE equation
+    !of motion for perturbations. Also adds the neutrino density and pressure
+    !to the grho, gpres
+    subroutine MassiveNuVars_dot(EV,y,a,adotoa,grho,gpres,grho_dot,gpres_dot)
+    implicit none
+    type(EvolutionVars) EV
+    real(dl) :: y(EV%nvar), a, adotoa, grho, gpres, grho_dot, gpres_dot
+    !grho = a^2 kappa rho
+    !gpres = a^2 kappa p
+    integer nu_i
+    real(dl) da, dt
+    real(dl) grhormass_t, grhormass_t_dot
+    real(dl) rhonu, pnu, rhonu_p, pnu_p, rhonu_m, pnu_m, rhonu_dot, pnu_dot
+
+    !Numerically evaluate the derivative with a small change in the scalefactor
+    da = 0.01*a
+    dt = da/a/adotoa
+
+    do nu_i = 1, CP%Nu_mass_eigenstates
+        grhormass_t=State%grhormass(nu_i)/a**2
+        grhormass_t_dot =State%grhormass(nu_i)/a**2*(-2*adotoa)
+
+        !Get density and pressure as ratio to massless by interpolation from table
+        call ThermalNuBack%rho_P(a*State%nu_masses(nu_i),rhonu,pnu)
+        call ThermalNuBack%rho_P((a+da)*State%nu_masses(nu_i),rhonu_p,pnu_p)
+        call ThermalNuBack%rho_P((a-da)*State%nu_masses(nu_i),rhonu_m,pnu_m)
+
+        rhonu_dot = (rhonu_p-rhonu_m)/2./dt
+        pnu_dot = (pnu_p-pnu_m)/2./dt
+
+        grho = grho  + grhormass_t*rhonu
+        gpres= gpres + grhormass_t*pnu
+
+        grho_dot = grho_dot  + grhormass_t_dot*rhonu+grhormass_t*rhonu_dot
+        gpres_dot= gpres_dot + grhormass_t_dot*pnu  +grhormass_t*pnu_dot
+
+    end do
+
+    end subroutine MassiveNuVars_dot
+    !</pavel>
 
 
     subroutine MassiveNuVars(EV,y,a,grho,gpres,dgrho,dgq, wnu_arr)
@@ -2165,6 +2231,9 @@
 
     real(dl) dgq,grhob_t,grhor_t,grhoc_t,grhog_t,grhov_t,grhonu_t,sigma,polter
     real(dl) w_dark_energy_t !equation of state of dark energy
+    !<pavel>
+    real(dl) grhov_ede_t, w_ede_t
+    !</pavel>
     real(dl) gpres_noDE !Pressure with matter and radiation, no dark energy
     real(dl) qgdot,qrdot,pigdot,pirdot,vbdot,dgrho,adotoa
     real(dl) a,a2,z,clxc,clxb,vb,clxg,qg,pig,clxr,qr,pir
@@ -2186,6 +2255,28 @@
     real(dl) ddopacity, visibility, dvisibility, ddvisibility, exptau, lenswindow
     real(dl) ISW, quadrupole_source, doppler, monopole_source, tau0, ang_dist
     real(dl) dgrho_de, dgq_de, cs2_de
+    !<pavel>
+    real(dl) de_Q, de_w_bg, de_Q_dot, de_w_bg_dot
+    real(dl) nu_grho,nu_gpres,nu_grho_dot,nu_gpres_dot
+    real(dl) grhom_t, grhom_t_dot, gpres_noDE_dot
+    real(dl) dgq_nu
+
+    !<pavel>
+    !TEST TRANSFER
+    !write(*,*) 'nbins', State%CP%DarkEnergy%de_n_bins
+    !write(*,*) 'nfluids', State%CP%DarkEnergy%de_n_fluids
+    !write(*,*) 'steptype', State%CP%DarkEnergy%de_step_type
+    !write(*,*) 'usepert', State%CP%DarkEnergy%de_use_perturbations
+    !write(*,*) 'cutoff', State%CP%DarkEnergy%de_overflow_cutoff
+    !write(*,*) 'tau', State%CP%DarkEnergy%de_tau
+    !write(*,*) 'binai', State%CP%DarkEnergy%de_bin_ai
+    !write(*,*) 'cs2', State%CP%DarkEnergy%de_cs2
+    !write(*,*) 'ampl', State%CP%DarkEnergy%de_bin_amplitudes
+    !stop
+    !</pavel>
+
+    ayprime = 0
+    !</pavel>
 
     k=EV%k_buf
     k2=EV%k2_buf
@@ -2213,13 +2304,6 @@
     grhor_t=State%grhornomass/a2
     grhog_t=State%grhog/a2
 
-    if (EV%is_cosmological_constant) then
-        grhov_t = State%grhov * a2
-        w_dark_energy_t = -1_dl
-    else
-        call State%CP%DarkEnergy%BackgroundDensityAndPressure(State%grhov, a, grhov_t, w_dark_energy_t)
-    end if
-
 
     !total perturbations: matter terms first, then add massive nu, de and radiation
     !  8*pi*a*a*SUM[rho_i*clx_i]
@@ -2231,8 +2315,39 @@
     grhonu_t=0
 
     if (State%CP%Num_Nu_Massive > 0) then
-        call MassiveNuVars(EV,ay,a,grhonu_t,gpres_nu,dgrho_matter,dgq, wnu_arr)
+        !<pavel>
+        dgq_nu = 0
+        call MassiveNuVars(EV,ay,a,grhonu_t,gpres_nu,dgrho_matter,dgq_nu, wnu_arr)
+        dgq = dgq + dgq_nu
+        !</pavel>
     end if
+
+    !<pavel>
+    if (EV%is_cosmological_constant) then
+        grhov_t = State%grhov * a2
+        w_dark_energy_t = -1_dl
+    else
+        de_w_bg = (gpres_nu + (grhor_t + grhog_t)/3)/(grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t)
+        if(.not. State%flat) then
+            stop 'omk'
+        endif
+        call State%CP%DarkEnergy%BackgroundDensityAndPressure(State%grhov, a, grhov_t, grhov_ede_t,&
+            a2*(State%grhok + grhob_t + grhoc_t + grhog_t + grhor_t + grhonu_t), &
+            w_dark_energy_t, w_ede_t, de_w_bg)
+    end if
+    !</pavel>
+
+    !<pavel>
+    !TEST 2, 3
+    !if(abs(k - 0.524) < 0.002) then
+    !    write(*,'(48e19.6e3)') a, k, grhoc_t, grhob_t, grhog_t, grhor_t, grhonu_t, grhov_t, w_dark_energy_t, grhov_ede_t, w_ede_t
+    !endif
+
+    !TEST COSMOMC
+    !if(abs(k - 0.524) < 0.02) then
+    !    write(*,'(48e19.6e3)') a, k, grhoc_t,grhob_t,grhog_t,grhor_t,grhonu_t,grhov_t
+    !endif
+    !</pavel>
 
     grho_matter=grhonu_t+grhob_t+grhoc_t
     grho = grho_matter+grhor_t+grhog_t+grhov_t
@@ -2292,9 +2407,19 @@
     pb43=4._dl/3*photbar
 
     if (.not. EV%is_cosmological_constant) then
-        call State%CP%DarkEnergy%PerturbedStressEnergy(dgrho_de, dgq_de, &
-            dgq, dgrho, grho, grhov_t, w_dark_energy_t, gpres_noDE, etak, &
-            adotoa, k, EV%Kf(1), ay, ayprime, EV%w_ix)
+        !<pavel>
+        !Which DE density to use depends on whether we consider perturbations in the
+        !total DE fluid or only in EDE
+        if(State%CP%DarkEnergy%de_n_fluids == 2) then
+            call State%CP%DarkEnergy%PerturbedStressEnergy(dgrho_de, dgq_de, &
+                dgq, dgrho, grho, grhov_ede_t, w_dark_energy_t, gpres_noDE, etak, &
+                adotoa, k, EV%Kf(1), ay, ayprime, EV%w_ix)
+        else
+            call State%CP%DarkEnergy%PerturbedStressEnergy(dgrho_de, dgq_de, &
+                dgq, dgrho, grho, grhov_t, w_dark_energy_t, gpres_noDE, etak, &
+                adotoa, k, EV%Kf(1), ay, ayprime, EV%w_ix)
+        endif
+        !</pavel>
         dgrho = dgrho + dgrho_de
         dgq = dgq + dgq_de
     end if
@@ -2311,9 +2436,56 @@
         ayprime(ix_etak)=0.5_dl*dgq + State%curv*z
     end if
 
-    if (.not. EV%is_cosmological_constant) &
-        call State%CP%DarkEnergy%PerturbationEvolve(ayprime, w_dark_energy_t, &
-        EV%w_ix, a, adotoa, k, z, ay)
+    !<pavel>
+    if (.not. EV%is_cosmological_constant) then
+        !Get coefficients necessary to calculate dw/dlna, then plug them into
+        !the DE perturbations EOM
+
+        !nu_grho should be equal to grhonu_t, nu_gpres to gpres_nu
+        nu_grho = 0
+        nu_gpres = 0
+        nu_grho_dot = 0
+        nu_gpres_dot = 0
+        call MassiveNuVars_dot(EV,ay,a,adotoa,nu_grho,nu_gpres,nu_grho_dot,nu_gpres_dot)
+
+        !<pavel>
+        !TEST 4
+        !if(abs(k - 0.524) < 0.002) then
+        !    write(*,'(48e19.6e3)') a, tau, k, nu_grho, nu_gpres, nu_grho_dot, nu_gpres_dot
+        !endif
+        !</pavel>
+
+        grhom_t = grhob_t + grhoc_t + grhog_t + grhor_t + nu_grho
+        !Notice that coefficient for baryons is not -3, because of additional a^2
+        grhom_t_dot = adotoa*(-grhob_t -grhoc_t -2*grhog_t - 2*grhor_t) + nu_grho_dot
+        gpres_noDE_dot = nu_gpres_dot - 2*adotoa*(grhor_t + grhog_t)/3
+
+        de_Q = grhom_t/(State%grhov * a * a)
+        de_w_bg = gpres_noDE/grhom_t
+
+        de_Q_dot = grhom_t_dot/(State%grhov * a * a) -2*adotoa*grhom_t/(State%grhov * a * a)
+        de_w_bg_dot = gpres_noDE_dot/grhom_t - gpres_noDE*grhom_t_dot/grhom_t**2
+
+        !<pavel>
+        !TEST 5
+        !if(abs(k - 0.524) < 0.002) then
+        !    write(*,'(48e19.6e3)') a, tau, k, grhom_t, grhom_t_dot, gpres_noDE_dot, &
+        !        de_Q, de_w_bg, de_Q_dot, de_w_bg_dot
+        !endif
+        !</pavel>
+
+        !Which w to use depends on whether we consider perturbations in the
+        !total DE fluid or only in EDE
+        if(State%CP%DarkEnergy%de_n_fluids == 2) then
+            call State%CP%DarkEnergy%PerturbationEvolve(ayprime, w_ede_t, &
+            EV%w_ix, a, adotoa, k, z, ay, de_Q, de_Q_dot, de_w_bg, de_w_bg_dot)
+        else
+            call State%CP%DarkEnergy%PerturbationEvolve(ayprime, w_dark_energy_t, &
+            EV%w_ix, a, adotoa, k, z, ay, de_Q, de_Q_dot, de_w_bg, de_w_bg_dot)
+        endif
+    endif
+    !</pavel>
+
 
     !  CDM equation of motion
     clxcdot=-k*z
@@ -2875,7 +3047,10 @@
     grhoc_t=State%grhoc/a
     grhor_t=State%grhornomass/a2
     grhog_t=State%grhog/a2
-    call CP%DarkEnergy%BackgroundDensityAndPressure(State%grhov, a, grhov_t, w_dark_energy_t)
+    !<pavel>
+    stop 'vec'
+    !call CP%DarkEnergy%BackgroundDensityAndPressure(State%grhov, a, grhov_t, w_dark_energy_t)
+    !</pavel>
 
     grho=grhob_t+grhoc_t+grhor_t+grhog_t+grhov_t
     gpres=(grhog_t+grhor_t)/3._dl+grhov_t*w_dark_energy_t

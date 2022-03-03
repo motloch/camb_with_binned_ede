@@ -501,6 +501,21 @@
 
         end do
 
+        !<pavel>
+        !do l = lmin, CL%lmax_lensed
+        !    write(*,*) CL%CL_lensed(l, CT_Temp)
+        !enddo
+        !write(*,*) 'te'
+        !do l = lmin, CL%lmax_lensed
+        !    write(*,*) CL%CL_lensed(l, CT_Cross)
+        !enddo
+        !write(*,*) 'ee'
+        !do l = lmin, CL%lmax_lensed
+        !    write(*,*) CL%CL_lensed(l, CT_E)
+        !enddo
+        !stop
+        !</pavel>
+
         if (DebugMsgs) call Timer%WriteTime('Time for corr lensing')
     end associate
 

@@ -9,6 +9,20 @@
     type, extends(TCambComponent) :: TDarkEnergyModel
         logical :: is_cosmological_constant = .true.
         integer :: num_perturb_equations = 0
+        !<pavel>
+        integer :: de_n_bins !Number of DE bins - the background rho is
+                             !multiplied by (1+delta_i) inside a redshift bin
+        integer :: de_n_fluids !Whether EDE and LCDM are a single fluid or not
+                               !(so whether Lambda has perturbations)
+        integer :: de_step_type !Whether we have steps smoothed into 1/(1+exp) or smoothed tophat
+        integer :: de_use_perturbations !Whether DE has evolving perturbations
+        real(dl) :: de_overflow_cutoff !Where to cut the exp when evaluating the
+                                       !steps (against overflow and underflow)
+        real(dl) :: de_cs2 !DE soundspeed
+        real(dl) :: de_tau !Smoothing scale for the steps
+        real(dl), allocatable :: de_bin_ai(:) !Scale factors defining the steps
+        real(dl), allocatable :: de_bin_amplitudes(:) !Amplitude of individual
+        !<pavel>
     contains
     procedure :: Init
     procedure :: BackgroundDensityAndPressure
@@ -43,9 +57,14 @@
     public TDarkEnergyModel, TDarkEnergyEqnOfState
     contains
 
-    function w_de(this, a)
+    !<pavel>
+    function w_de(this, a, delta, ddelta_dlna, Q, w_bg)
+    !</pavel>
     class(TDarkEnergyModel) :: this
     real(dl) :: w_de, al
+    !<pavel>
+    real(dl), intent(in) :: delta, ddelta_dlna, Q, w_bg
+    !</pavel>
     real(dl), intent(IN) :: a
 
     w_de = -1._dl
@@ -75,12 +94,22 @@
 
     end subroutine Init
 
-    subroutine BackgroundDensityAndPressure(this, grhov, a, grhov_t, w)
+    !<pavel>
+    subroutine BackgroundDensityAndPressure(this, grhov, a, grhov_t, grhov_ede_t, &
+        grhoa2_noDE, w, w_ede, w_bg)
+    !</pavel>
     !Get grhov_t = 8*pi*rho_de*a**2 and (optionally) equation of state at scale factor a
     class(TDarkEnergyModel), intent(inout) :: this
     real(dl), intent(in) :: grhov, a
     real(dl), intent(out) :: grhov_t
     real(dl), optional, intent(out) :: w
+    !<pavel>
+    real(dl), intent(in) :: grhoa2_noDE
+    real(dl), optional, intent(in) :: w_bg
+    real(dl) :: delta, ddelta_dlna, Q
+    real(dl), intent(out) :: grhov_ede_t
+    real(dl), optional, intent(out) :: w_ede
+    !</pavel>
 
     if (this%is_cosmological_constant) then
         grhov_t = grhov * a * a
@@ -92,7 +121,9 @@
         else
             grhov_t = 0._dl
         end if
-        if (present(w)) w = this%w_de(a)
+        !<pavel>
+        if (present(w)) w = this%w_de(a, delta, ddelta_dlna, Q, w_bg)
+        !</pavel>
     end if
 
     end subroutine BackgroundDensityAndPressure
@@ -136,11 +167,16 @@
 
     end function diff_rhopi_Add_Term
 
-    subroutine PerturbationEvolve(this, ayprime, w, w_ix, a, adotoa, k, z, y)
+    !<pavel>
+    subroutine PerturbationEvolve(this, ayprime, w, w_ix, a, adotoa, k, z, y, Q, Q_dot, w_bg, w_bg_dot)
+    !</pavel>
     class(TDarkEnergyModel), intent(in) :: this
     real(dl), intent(inout) :: ayprime(:)
     real(dl), intent(in) :: a,adotoa, k, z, y(:), w
     integer, intent(in) :: w_ix
+    !<pavel>
+    real(dl), intent(in) :: Q, Q_dot, w_bg, w_bg_dot
+    !</pavel>
     end subroutine PerturbationEvolve
 
 
@@ -168,11 +204,15 @@
 
     end subroutine TDarkEnergyEqnOfState_SetwTable
 
-
-    function TDarkEnergyEqnOfState_w_de(this, a)
+    !<pavel>
+    function TDarkEnergyEqnOfState_w_de(this, a, delta, ddelta_dlna, Q, w_bg)
+    !</pavel>
     class(TDarkEnergyEqnOfState) :: this
     real(dl) :: TDarkEnergyEqnOfState_w_de, al
     real(dl), intent(IN) :: a
+    !<pavel>
+    real(dl), intent(in) :: delta, ddelta_dlna, Q, w_bg
+    !</pavel>
 
     if(.not. this%use_tabulated_w) then
         TDarkEnergyEqnOfState_w_de= this%w_lam+ this%wa*(1._dl-a)
